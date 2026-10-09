@@ -14,7 +14,6 @@ import {
   ChevronRight,
   Library,
   ListTree,
-  Menu,
   Loader2,
   PanelRightClose,
   PanelRightOpen,
@@ -469,15 +468,9 @@ const progress = computed(() => {
              them, rather than in a bar at the foot of the screen next to the
              progress readout. On a desktop both are already columns. -->
         <template v-if="isMobile">
-          <button
-            class="iconbtn"
-            title="典籍目录"
-            aria-label="典籍目录"
-            :aria-pressed="R.railDrawer"
-            @click="R.railDrawer = !R.railDrawer"
-          >
-            <Menu :size="19" />
-          </button>
+          <!-- Only the title contents here. The catalogue drawer has its own
+               button in the top bar's left corner, and two controls for one
+               panel — one on each side of the bar — is one too many. -->
           <button
             class="iconbtn"
             title="标题目录"

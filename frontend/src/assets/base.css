@@ -1101,6 +1101,11 @@ svg {
   width: 100%;
   border-collapse: collapse;
   font-size: 12.5px;
+  /* Fixed layout, so the declared column widths are obeyed. With the default
+     auto layout a long form in the last column — `kassapāse` — was given the
+     room it asked for and pushed the table past the panel's edge, where the
+     panel's overflow clipped it. The forms wrap instead. */
+  table-layout: fixed;
 }
 .gtable th {
   width: 82px;

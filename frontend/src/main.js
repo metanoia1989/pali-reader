@@ -14,3 +14,16 @@ app.use(router)
 useSettings().apply()
 
 app.mount('#app')
+
+// The service worker caches the built shell only — see public/sw.js for what it
+// refuses to touch and why. Registered after load so it never competes with the
+// first paint, and skipped in dev, where the files it would cache are not the
+// ones being served.
+if (import.meta.env.PROD && 'serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js').catch(() => {
+      // A reader without the worker is a reader with a slightly slower repeat
+      // visit. Not a reason to say anything.
+    })
+  })
+}

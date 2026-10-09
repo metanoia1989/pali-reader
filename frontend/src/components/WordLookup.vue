@@ -854,12 +854,16 @@ function bare(p) {
 .entry + .entry {
   margin-top: 3px;
 }
+/* No side padding: the entry already sits inside the panel's own margin, so a
+   second inset only narrows the row that carries the most text — the same
+   reason the expanded body has none. Vertical padding stays: it is what makes
+   the row a comfortable target. */
 .ehead {
   display: flex;
   align-items: center;
   gap: 7px;
   width: 100%;
-  padding: 5px 8px;
+  padding: 5px 0;
   text-align: left;
   transition: background var(--fast);
 }

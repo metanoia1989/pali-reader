@@ -1,0 +1,17 @@
+{
+  "name": "巴利三藏阅读器",
+  "short_name": "三藏",
+  "description": "点击经文中的任一单词即可查词、拆解复合词、展开变格表，并把结论写回原文之下。",
+  "lang": "zh-Hans",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#f5f4ed",
+  "theme_color": "#f5f4ed",
+  "icons": [
+    { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
