@@ -101,8 +101,14 @@ tipitaka-pali-reader 的做法呈现：**只写标题，不加自己的编号**�
 | 巴漢詞典 / 漢譯パーリ語辭典 / 水野弘元 | `zh/*.txt`（Tabfile） | 中文释义 |
 | 社区整理 | `zh_supplement.json` | 中文词典补编 |
 
-源文件**不入库**（几个 GB，见 `.gitignore`）。服务器上在
+源文件**不入库**（几个 GB，见 `.gitignore`）。放哪、每份多大、**从哪个地址下载**，
+都写在 `../pali-data/README.md` 里（与本仓库平级）。服务器上在
 `/www/server/go_project/pali_reading/sources/`。
+
+两个地址最常用：参考译文来自
+`https://github.com/dhammanana/epitaka_app/releases/download/latest/epitaka_zh.zip`，
+三藏原文来自 `bksubhuti/tipitaka-pali-reader` 的 release 资产 `tipitaka_pali.db.tar.bz2`。
+注意 `dpd.db` **不是直接下载的文件**，是 `dpd-db` 构建出来的产物。
 
 ### 三、库与设计系统
 
