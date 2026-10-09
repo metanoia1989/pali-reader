@@ -1,0 +1,430 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>巴利三藏阅读器 — 阅读工作台与手机阅读页</title>
+<style>
+/* ── kami 阅读面 tokens ────────────────────────────────── */
+:root{
+  --bg:#f5f4ed; --surface:#faf9f5; --surface-warm:#e8e6dc;
+  --fg:#141413; --fg-2:#3d3d3a; --muted:#504e49; --meta:#6b6a64;
+  --border:#e8e6dc; --border-soft:#e5e3d8;
+  --accent:#1b365d; --accent-on:#faf9f5; --accent-active:#142a48;
+  --tag-bg-soft:#e4ecf5; --tag-bg-base:#d6e1ee;
+  --font-display:'Iowan Old Style', Palatino, Georgia, "Songti SC", "Source Han Serif SC", serif;
+  --font-body:'Iowan Old Style', Palatino, Georgia, "Songti SC", "Source Han Serif SC", serif;
+  --radius-xs:2px; --radius-sm:4px; --radius-md:8px; --radius-lg:12px;
+  --elev-raised:0 4px 24px rgba(0,0,0,.05);
+  --focus-ring:0 0 0 2px var(--accent);
+  --motion-base:200ms; --ease-standard:cubic-bezier(.2,0,0,1);
+  --rule-dotted:color-mix(in oklab, var(--surface-warm) 45%, var(--meta));
+
+  /* 词典工具面：只用于左侧 .dict 面板与底部颜色说明 */
+  --d-bg:#fdf8f2; --d-entry:#fffcf8; --d-hover:#f8efe4; --d-rule:#eadfd0;
+  --d-head:#8b4513; --d-homo:#b8936e; --d-link:#2d5a27; --d-link-h:#1a6b1a;
+  --d-green-bg:#f0f7ee; --d-green-h:#e2f0dd; --d-comp:#1a4a7a; --d-comp-bg:#eef6ff;
+  --d-comp-bd:#bdd7f5; --d-th:#5c3a1e; --d-th-bg:#f5e6d3; --d-match:#92400e;
+  --d-match-bg:#fde68a; --d-expand:#fefcf9; --d-off:#cfc2b1;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--fg);font:400 14px/1.55 var(--font-body);-webkit-font-smoothing:antialiased}
+button,input{font:inherit;color:inherit}
+button{background:none;border:0;cursor:pointer;text-align:left;border-radius:var(--radius-sm)}
+ul{list-style:none}
+kbd{font:400 11px/1 var(--font-body);color:var(--meta);border:1px solid var(--border);border-radius:var(--radius-xs);padding:2px 4px;background:var(--surface)}
+:focus-visible{outline:none;box-shadow:var(--focus-ring)}
+.num{font-variant-numeric:tabular-nums}
+svg{display:block;flex:none}
+.tr{transition:background var(--motion-base) var(--ease-standard),color var(--motion-base) var(--ease-standard)}
+
+/* ── 顶栏 ─────────────────────────────────────────────── */
+.frame{width:1440px;max-width:100%;margin:0 auto;background:var(--bg);border-bottom:1px solid var(--border)}
+.topbar{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:24px;height:58px;padding:0 20px;border-bottom:1px solid var(--border)}
+.tb-left{display:flex;align-items:center;gap:14px;min-width:0}
+.brand{display:flex;align-items:center;gap:8px;font:500 15px/1 var(--font-display);color:var(--fg);white-space:nowrap}
+.brand svg{color:var(--accent)}
+.crumb{font:400 12.5px/1 var(--font-body);color:var(--meta);white-space:nowrap}
+.search{display:flex;align-items:center;gap:9px;width:392px;height:34px;padding:0 8px 0 11px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-md);color:var(--meta);cursor:text;transition:background var(--motion-base) var(--ease-standard)}
+.search:hover{background:var(--surface-warm);color:var(--accent)}
+.search input{flex:1;min-width:0;border:0;background:none;outline:none;font:400 12.5px/1 var(--font-body);color:var(--fg)}
+.search:hover input{color:var(--accent)}
+.search input::placeholder{color:var(--meta)}
+.search:focus-within{box-shadow:var(--focus-ring)}
+.tb-right{display:flex;align-items:center;gap:6px;justify-self:end}
+.ibtn{display:grid;place-items:center;width:30px;height:30px;border-radius:var(--radius-sm);color:var(--fg-2)}
+.ibtn:hover{background:var(--surface-warm);color:var(--accent)}
+.avatar{display:grid;place-items:center;width:28px;height:28px;border-radius:50%;background:var(--surface-warm);color:var(--fg-2)}
+
+/* ── 三栏工作台 ───────────────────────────────────────── */
+.work{display:grid;grid-template-columns:404px minmax(0,1fr) 232px}
+
+/* 左：词典（更暖、更高对比的工具面） */
+.dict{background:var(--d-bg);border-right:1px solid var(--d-rule);padding:14px 18px 26px}
+.switch{display:flex;background:var(--d-entry);border:1px solid var(--d-rule);border-radius:var(--radius-md);padding:2px;margin-bottom:14px}
+.switch button{flex:1;text-align:center;padding:7px 0;border-radius:var(--radius-sm);font:500 12.5px/1 var(--font-body);letter-spacing:.4px;color:var(--muted)}
+.switch button:hover{background:var(--d-hover);color:var(--accent)}
+.switch button[aria-selected="true"]{background:var(--accent);color:var(--accent-on)}
+.dtools{display:flex;align-items:center;gap:2px;margin-bottom:12px}
+.dtools .sp{flex:1}
+.dbtn{display:grid;place-items:center;width:26px;height:26px;border-radius:var(--radius-sm);color:var(--d-head)}
+.dbtn:hover{background:var(--d-hover);color:var(--accent)}
+.dbtn[disabled]{color:var(--d-off);cursor:default}
+.dbtn[disabled]:hover{background:none;color:var(--d-off)}
+.headword{font:500 26px/1.25 var(--font-display);color:var(--d-head)}
+.ipa{font:400 12.5px/1.5 var(--font-body);color:var(--meta);margin-top:4px}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:11px}
+.chip{font:500 11px/1 var(--font-body);letter-spacing:.4px;padding:4px 7px;border-radius:var(--radius-xs);background:var(--d-th-bg);color:var(--d-th)}
+.dlabel{font:500 11.5px/1.35 var(--font-body);letter-spacing:.6px;color:var(--meta);margin:20px 0 8px}
+.tbl{border:1px solid var(--d-rule);border-radius:var(--radius-sm);overflow:hidden;background:var(--d-entry)}
+table{width:100%;border-collapse:collapse;font:400 12px/1.5 var(--font-body)}
+.forms th{background:var(--d-th-bg);color:var(--d-th);font:500 11px/1.4 var(--font-body);letter-spacing:.4px;text-align:left;padding:6px 8px}
+.forms td{padding:5px 8px;border-top:1px solid var(--d-rule);color:var(--fg-2)}
+.forms .g{color:var(--d-link);font-weight:500;padding:0;border-radius:var(--radius-xs)}
+.forms .g:hover{background:var(--d-hover);color:var(--d-link-h)}
+.expand{width:100%;text-align:center;padding:8px 0;background:var(--d-expand);color:var(--d-head);font:500 11.5px/1.4 var(--font-body);letter-spacing:.4px;border-top:1px solid var(--d-rule);border-radius:0}
+.expand:hover{background:var(--d-hover);color:var(--accent)}
+.decomp{background:var(--d-green-bg);border-radius:var(--radius-sm);padding:7px 9px;font:500 14px/1.5 var(--font-body);color:var(--d-link)}
+.decomp button{font:inherit;color:var(--d-link);padding:0 3px;border-radius:var(--radius-xs)}
+.decomp button:hover{background:var(--d-green-h);color:var(--d-link-h)}
+.cap{font:400 11px/1.6 var(--font-body);color:var(--meta);margin-top:6px}
+.entry{display:flex;align-items:center;gap:9px;width:100%;padding:9px 10px;background:var(--d-entry);border:1px solid var(--d-rule);border-radius:var(--radius-sm)}
+.entry:hover{background:var(--d-hover)}
+.entry svg{color:var(--d-homo)}
+.entry .hz{font:500 14.5px/1.3 var(--font-display);color:var(--d-head)}
+.entry .pos{font:400 11.5px/1 var(--font-body);color:var(--meta)}
+.entry .gl{flex:1;min-width:0;font:400 12px/1.4 var(--font-body);color:var(--meta);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ecard{background:var(--d-entry);border:1px solid var(--d-rule);border-radius:var(--radius-sm);padding:11px;margin-top:9px}
+.ecard .gloss{font:400 12px/1.6 var(--font-body);color:var(--fg-2)}
+.srcs{display:flex;flex-wrap:wrap;gap:5px;margin:10px 0}
+.src{font:500 10.5px/1 var(--font-body);letter-spacing:.4px;padding:4px 7px;border-radius:var(--radius-xs);border:1px solid var(--d-rule);color:var(--muted);background:var(--surface)}
+.src:hover{background:var(--d-hover);color:var(--accent)}
+.src[aria-pressed="true"],.src[aria-pressed="true"]:hover{background:var(--d-head);border-color:var(--d-head);color:var(--d-entry)}
+.kv{display:grid;grid-template-columns:72px 1fr;gap:6px 10px;padding:10px 0;border-top:1px solid var(--d-rule);border-bottom:1px solid var(--d-rule);font:400 11.5px/1.5 var(--font-body)}
+.kv dt{color:var(--meta)}
+.kv dd{color:var(--fg-2)}
+.kv .g{color:var(--d-link);font-weight:500;padding:0 2px;border-radius:var(--radius-xs)}
+.kv .g:hover{background:var(--d-hover);color:var(--d-link-h)}
+.kv .aside{color:var(--meta)}
+.decl{margin-top:10px}
+.decl th{background:var(--d-th-bg);color:var(--d-th);font:500 10.5px/1.4 var(--font-body);letter-spacing:.4px;text-align:left;padding:5px 6px}
+.decl td{padding:4px 6px;border-top:1px solid var(--d-rule);vertical-align:top;font-size:11.5px}
+.decl .case{color:var(--meta);font-size:10.5px;letter-spacing:.3px}
+.decl .form{display:block;line-height:1.7}
+.decl .stem{color:var(--meta)}
+.decl .end{color:var(--d-head);font-weight:500}
+.decl .match{display:inline-block;background:var(--d-match-bg);border-radius:var(--radius-xs);padding:0 3px}
+.decl .match .stem,.decl .match .end{color:var(--d-match)}
+
+/* 中：正文 */
+.reader{padding:28px 44px 70px}
+.reader h1{font:500 23px/1.35 var(--font-display);color:var(--fg)}
+.reader .sub{font:400 12.5px/1.5 var(--font-body);color:var(--meta);margin-top:7px;letter-spacing:.3px}
+.pcard{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-md);padding:20px 24px;margin-top:18px}
+.pali,.pread p{font:400 19.5px/1.8 var(--font-display);color:var(--fg)}
+.pali .n,.pread .n{font-weight:500;margin-right:2px}
+.w{border-bottom:1px dotted var(--rule-dotted);cursor:pointer}
+.w:hover{background:var(--surface-warm);color:var(--accent)}
+.w.open{background:var(--tag-bg-soft);color:var(--accent);border-bottom-color:transparent;padding:1px 3px;border-radius:var(--radius-xs)}
+.gline{display:flex;align-items:flex-start;gap:10px;margin-top:16px}
+.mark{display:grid;place-items:center;width:20px;height:20px;flex:none;margin-top:3px;border:1px solid var(--border);border-radius:var(--radius-xs);background:var(--surface);font:500 11px/1 var(--font-body);color:var(--meta)}
+.gchip{display:inline-flex;align-items:baseline;gap:12px;padding:7px 11px;background:var(--tag-bg-soft);border-radius:var(--radius-sm);font:400 12.5px/1.5 var(--font-body);color:var(--fg-2)}
+.gchip .hz{font-weight:500;color:var(--accent)}
+.ref{font:400 13.5px/1.75 var(--font-body);color:var(--fg-2);padding-top:2px}
+.ref .from{font:400 11.5px/1.4 var(--font-body);color:var(--meta);white-space:nowrap;margin-left:8px}
+
+/* 右：标题目录（只用缩进与字号表达层级） */
+.outline{border-left:1px solid var(--border);padding:24px 14px;background:var(--bg)}
+.rlabel{font:500 11px/1 var(--font-body);letter-spacing:1.2px;color:var(--meta);padding:0 8px 14px}
+.orow{display:block;width:100%;padding:5px 8px;color:var(--fg-2)}
+.o1{font:500 16px/1.45 var(--font-display);color:var(--fg)}
+.o2{font:400 15px/1.5 var(--font-body);padding-left:36px}
+.orow:hover{background:var(--surface-warm);color:var(--accent)}
+.ocur{color:var(--accent);background:var(--tag-bg-soft);box-shadow:inset 2px 0 0 var(--accent);border-radius:0 var(--radius-sm) var(--radius-sm) 0}
+.ocur:hover{background:var(--tag-bg-base);color:var(--accent-active)}
+
+/* ── 手写标签 ─────────────────────────────────────────── */
+.hand{width:1440px;max-width:100%;margin:0 auto;padding:30px 64px 24px;display:flex;align-items:center;gap:10px;
+  font:400 13.5px/1.5 var(--font-body);color:var(--meta);transform:rotate(-.35deg);transform-origin:left center}
+.hand svg{color:var(--accent)}
+
+/* ── Piece B：手机阅读页 ──────────────────────────────── */
+.phone{width:390px;height:844px;margin:0 auto;background:var(--bg);border:1px solid var(--border);border-radius:24px;overflow:hidden;display:flex;flex-direction:column;box-shadow:var(--elev-raised)}
+.pbar{display:flex;align-items:center;gap:2px;height:58px;padding:0 12px;border-bottom:1px solid var(--border);flex:none}
+.pbar .title{flex:1;min-width:0;font:500 16px/1.2 var(--font-display);color:var(--fg);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding-left:6px}
+.pbtn{display:grid;place-items:center;width:44px;height:44px;border-radius:var(--radius-sm);color:var(--fg-2)}
+.pbtn:hover{background:var(--surface-warm);color:var(--accent)}
+.pbtn[aria-pressed="true"]{background:var(--tag-bg-soft);color:var(--accent)}
+.pread{flex:1;min-height:0;overflow:hidden;padding:22px 20px 0}
+.pread p{margin-bottom:22px}
+.pread .gline{margin-top:0}
+.pfoot{display:flex;align-items:center;gap:12px;flex:none;padding:16px 20px 20px;border-top:1px solid var(--border)}
+.plbl{font:400 11px/1 var(--font-body);color:var(--meta);white-space:nowrap}
+.track{flex:1;height:3px;border-radius:2px;background:var(--surface-warm)}
+.track i{display:block;height:3px;width:33.3%;border-radius:2px;background:var(--accent)}
+
+/* ── 设计规则 ─────────────────────────────────────────── */
+.rules{width:1440px;max-width:100%;margin:0 auto;padding:56px 64px 88px}
+.rcard{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:28px 30px 24px}
+.rcard h2{font:500 17px/1.3 var(--font-display);color:var(--fg)}
+.rgrid{display:grid;grid-template-columns:1fr 1fr;gap:14px 40px;margin-top:18px}
+.rrow{display:grid;grid-template-columns:14px 1fr;gap:12px;align-items:start;font:400 13.5px/1.65 var(--font-body);color:var(--fg-2)}
+.sw{width:14px;height:14px;border-radius:var(--radius-xs);margin-top:4px;border:1px solid var(--border)}
+.sw.acc{background:var(--tag-bg-soft);border-color:var(--tag-bg-base)}
+.sw.hd{background:var(--d-head);border-color:var(--d-head)}
+.sw.gr{background:var(--d-link);border-color:var(--d-link)}
+.sw.am{background:var(--d-match-bg);border-color:var(--d-match)}
+.rrow b{font-weight:500;color:var(--fg)}
+.rnote{font:400 12px/1.6 var(--font-body);color:var(--meta);margin-top:18px;padding-top:16px;border-top:1px solid var(--border-soft)}
+
+@media (max-width:1024px){
+  .frame,.hand,.rules{width:100%}
+  .work{grid-template-columns:minmax(0,1fr)}
+  .dict{border-right:0;border-bottom:1px solid var(--border)}
+  .outline{border-left:0;border-top:1px solid var(--border)}
+  .reader{padding:26px 24px 48px}
+  .rgrid{grid-template-columns:1fr}
+  .rules{padding:40px 24px 64px}
+  .topbar{grid-template-columns:1fr auto;gap:12px}
+  .tb-left .crumb{display:none}
+  .phone{height:auto;min-height:700px}
+}
+</style>
+</head>
+<body>
+
+<!-- ══════════ Piece A — 阅读工作台 ══════════ -->
+<div class="frame" data-od-id="piece-a-workspace">
+
+  <header class="topbar" data-od-id="topbar">
+    <div class="tb-left">
+      <span class="brand" data-od-id="brand">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 3h12v18l-6-4.6L6 21z"/></svg>
+        巴利三藏阅读器
+      </span>
+      <span class="crumb" data-od-id="breadcrumb">根本三藏 › 戒蕴品</span>
+    </div>
+    <label class="search" data-od-id="topbar-search">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.6-3.6"/></svg>
+      <input type="search" placeholder="搜索经文…" aria-label="搜索经文">
+      <kbd>⌘K</kbd>
+    </label>
+    <div class="tb-right">
+      <button class="ibtn tr" data-od-id="topbar-settings" aria-label="设置">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3.2"/><path d="M19.2 14.8a1.7 1.7 0 0 0 .34 1.9l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.7 1.7 0 0 0-2.89 1.2V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-2.9-1.17l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.7 1.7 0 0 0 3.2 14.8H3a2 2 0 1 1 0-4h.1A1.7 1.7 0 0 0 4.9 7.9l-.06-.06A2 2 0 1 1 7.67 5l.06.06a1.7 1.7 0 0 0 1.9.34H9.7a1.7 1.7 0 0 0 1-1.55V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 2.9 1.17l.06-.06A2 2 0 1 1 20.5 7.05l-.06.06a1.7 1.7 0 0 0-.34 1.9v.09a1.7 1.7 0 0 0 1.55 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.55 1z"/></svg>
+      </button>
+      <span class="avatar" data-od-id="topbar-avatar" aria-label="账户">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="8.5" r="3.6"/><path d="M4.5 20.5a7.5 7.5 0 0 1 15 0"/></svg>
+      </span>
+    </div>
+  </header>
+
+  <div class="work">
+
+    <!-- 左：词典 -->
+    <aside class="dict" data-od-id="dict-panel">
+      <div class="switch" role="tablist" aria-label="侧栏模式" data-od-id="dict-switch">
+        <button role="tab" aria-selected="false" data-od-id="switch-contents">目录</button>
+        <button role="tab" aria-selected="true" data-od-id="switch-dict">词典</button>
+      </div>
+
+      <div class="dtools">
+        <button class="dbtn tr" data-od-id="dict-back" aria-label="上一词">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m14 6-6 6 6 6"/></svg>
+        </button>
+        <button class="dbtn" disabled aria-label="下一词">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m10 6 6 6-6 6"/></svg>
+        </button>
+        <span class="sp"></span>
+        <button class="dbtn tr" data-od-id="dict-copy" aria-label="复制词条">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5.5 15V6a2 2 0 0 1 2-2H16"/></svg>
+        </button>
+        <button class="dbtn tr" data-od-id="dict-close" aria-label="关闭词典">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg>
+        </button>
+      </div>
+
+      <h2 class="headword" data-od-id="dict-headword">dhammacakkaṃ</h2>
+      <p class="ipa" data-od-id="dict-ipa">/d̪ʰəmmət͡ʃəkkə/</p>
+      <div class="chips" data-od-id="dict-chips">
+        <span class="chip">nt</span><span class="chip">复合词</span><span class="chip">kammadhāraya</span><span class="chip num">语料 51 次</span>
+      </div>
+
+      <p class="dlabel" data-od-id="forms-label">词形分析</p>
+      <div class="tbl">
+        <table class="forms" data-od-id="forms-table">
+          <colgroup><col style="width:44px"><col style="width:30px"><col style="width:34px"><col style="width:30px"><col style="width:28px"><col></colgroup>
+          <thead><tr><th>pos</th><th>性</th><th>格</th><th>数</th><th>of</th><th>word</th></tr></thead>
+          <tbody>
+            <tr><td>noun</td><td>nt</td><td>nom</td><td>sg</td><td>of</td><td><button class="g tr" data-od-id="form-nom">dhammacakka</button></td></tr>
+            <tr><td>noun</td><td>nt</td><td>acc</td><td>sg</td><td>of</td><td><button class="g tr" data-od-id="form-acc">dhammacakka</button></td></tr>
+            <tr><td>noun</td><td>nt</td><td>voc</td><td>sg</td><td>of</td><td><button class="g tr" data-od-id="form-voc">dhammacakka</button></td></tr>
+          </tbody>
+          <tfoot><tr><td colspan="6" style="padding:0"><button class="expand tr" data-od-id="forms-expand">展开全部 12 条 ▾</button></td></tr></tfoot>
+        </table>
+      </div>
+
+      <p class="dlabel" data-od-id="decomp-label">拆解</p>
+      <div class="decomp" data-od-id="decomp-block">
+        <button data-od-id="decomp-dhamma">dhamma</button> +
+        <button data-od-id="decomp-cakka">cakka</button>
+      </div>
+      <p class="cap" data-od-id="decomp-caption">点击任一部分继续查词 · 拆解来自 DPD</p>
+
+      <p class="dlabel" data-od-id="entries-label">词条 · 1 条 · 点击展开</p>
+      <button class="entry tr" data-od-id="entry-collapsed" aria-expanded="false">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
+        <span class="hz">dhammacakka</span><span class="pos">nt</span>
+        <span class="gl">Dhamma teaching, the wheel of the Dhamma set in motion…</span>
+      </button>
+
+      <div class="ecard" data-od-id="entry-expanded">
+        <p class="gloss">nt. Dhamma teaching (lit. Dhamma wheel)</p>
+        <div class="srcs" data-od-id="entry-sources">
+          <button class="src tr" aria-pressed="true" data-od-id="src-dpd">DPD</button>
+          <button class="src tr" aria-pressed="false" data-od-id="src-bahant">巴漢詞典</button>
+          <button class="src tr" aria-pressed="false" data-od-id="src-pts">PTS</button>
+          <button class="src tr" aria-pressed="false" data-od-id="src-concise">Concise</button>
+        </div>
+        <dl class="kv" data-od-id="entry-kv">
+          <dt>Grammar</dt><dd>nt, comp</dd>
+          <dt>Root</dt><dd><button class="g tr" data-od-id="kv-root">√dhar</button> <span class="aside">hold, carry, endure</span></dd>
+          <dt>Construction</dt><dd><button class="g tr" data-od-id="kv-construction">dhamma + cakka</button></dd>
+          <dt>Sanskrit</dt><dd>dharmacakra</dd>
+        </dl>
+        <table class="decl" data-od-id="declension-table">
+          <thead><tr><th>格</th><th>masc sg</th><th>masc pl</th></tr></thead>
+          <tbody>
+            <tr><td class="case">nom</td>
+              <td><span class="form"><span class="stem">dhammacakka</span><span class="end">ṃ</span></span></td>
+              <td><span class="form"><span class="stem">dhammacakka</span><span class="end">ā</span></span></td></tr>
+            <tr><td class="case">acc</td>
+              <td><span class="form match" data-od-id="form-matched"><span class="stem">dhammacakka</span><span class="end">ṃ</span></span></td>
+              <td><span class="form"><span class="stem">dhammacakka</span><span class="end">e</span></span></td></tr>
+            <tr><td class="case">instr</td>
+              <td><span class="form"><span class="stem">dhammacakka</span><span class="end">ena</span></span></td>
+              <td><span class="form"><span class="stem">dhammacakka</span><span class="end">ehi</span></span><span class="form"><span class="stem">dhammacakka</span><span class="end">ebhi</span></span></td></tr>
+            <tr><td class="case">dat</td>
+              <td><span class="form"><span class="stem">dhammacakka</span><span class="end">ssa</span></span></td>
+              <td><span class="form"><span class="stem">dhammacakka</span><span class="end">ānaṃ</span></span></td></tr>
+            <tr><td class="case">abl</td>
+              <td><span class="form"><span class="stem">dhammacakka</span><span class="end">ā</span></span></td>
+              <td><span class="form"><span class="stem">dhammacakka</span><span class="end">ehi</span></span></td></tr>
+            <tr><td class="case">gen</td>
+              <td><span class="form"><span class="stem">dhammacakka</span><span class="end">ssa</span></span></td>
+              <td><span class="form"><span class="stem">dhammacakka</span><span class="end">ānaṃ</span></span></td></tr>
+            <tr><td class="case">loc</td>
+              <td><span class="form"><span class="stem">dhammacakka</span><span class="end">e</span></span></td>
+              <td><span class="form"><span class="stem">dhammacakka</span><span class="end">esu</span></span></td></tr>
+            <tr><td class="case">voc</td>
+              <td><span class="form"><span class="stem">dhammacakka</span><span class="end">∅</span></span></td>
+              <td><span class="form"><span class="stem">dhammacakka</span><span class="end">ā</span></span></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </aside>
+
+    <!-- 中：正文 -->
+    <section class="reader" data-od-id="reader">
+      <h1 data-od-id="book-title">戒蕴品 · Sīlakkhandhavagga</h1>
+      <p class="sub" data-od-id="book-sub">长部 · 第一经 · brahmajālasuttaṃ</p>
+
+      <article class="pcard" data-od-id="para-1">
+        <p class="pali"><span class="n">1.</span> <span class="w">Evaṃ</span> me <span class="w">sutaṃ</span> — ekaṃ <span class="w">samayaṃ</span> <span class="w">bhagavā</span> antarā ca rājagahaṃ antarā ca nāḷandaṃ addhānamaggappaṭipanno hoti mahatā bhikkhusaṅghena saddhiṃ pañcamattehi bhikkhusatehi.</p>
+      </article>
+
+      <article class="pcard" data-od-id="para-2">
+        <p class="pali"><span class="n">2.</span> Tatra kho <span class="w">bhagavā</span> pañcavaggiye bhikkhū āmantesi — anuttaraṃ <span class="w open" data-od-id="word-open">dhammacakkaṃ</span> pavattitaṃ, appaṭivattiyaṃ samaṇena vā brāhmaṇena vā devena vā mārena vā brahmunā vā kenaci vā lokasmiṃ.</p>
+        <div class="gline">
+          <span class="mark">释</span>
+          <span class="gchip num" data-od-id="gloss-chip"><span class="hz">dhammacakkaṃ</span><span>nt</span><span>法轮；佛法之教说</span></span>
+        </div>
+        <div class="gline">
+          <span class="mark">参</span>
+          <p class="ref" data-od-id="ref-line">世尊于仙人堕处鹿野苑，为五比丘转无上法轮；此法轮不为沙门、婆罗门、天、魔、梵及世间任何人所逆转。<span class="from">ePitaka 中译</span></p>
+        </div>
+      </article>
+    </section>
+
+    <!-- 右：标题目录 -->
+    <nav class="outline" data-od-id="outline" aria-label="标题目录">
+      <p class="rlabel">标题目录</p>
+      <button class="orow o1 tr" data-od-id="outline-1-brahmajala">1. brahmajālasuttaṃ</button>
+      <button class="orow o2 tr" data-od-id="outline-dighanikayo">dīghanikāyo</button>
+      <button class="orow o2 ocur" data-od-id="outline-paribbajaka" aria-current="true">paribbajakakahā</button>
+      <button class="orow o2 tr" data-od-id="outline-culasila">cūḷasīlaṃ</button>
+      <button class="orow o2 tr" data-od-id="outline-majjhimasila">majjhimasīlaṃ</button>
+      <button class="orow o2 tr" data-od-id="outline-mahasila">mahāsīlaṃ</button>
+      <button class="orow o1 tr" data-od-id="outline-2-samannaphala">2. sāmaññaphalasuttaṃ</button>
+    </nav>
+
+  </div>
+</div>
+
+<p class="hand" data-od-id="hand-label">
+  <svg width="26" height="10" viewBox="0 0 26 10" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><path d="M1 7c4-5 7 3 11-2s8 3 13-3"/></svg>
+  Piece B — 手机阅读页，同一套文字，窄屏重排
+</p>
+
+<!-- ══════════ Piece B — 手机阅读页 ══════════ -->
+<div class="phone" data-od-id="piece-b-phone">
+
+  <header class="pbar" data-od-id="phone-topbar">
+    <button class="pbtn tr" data-od-id="phone-back" aria-label="返回">
+      <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg>
+    </button>
+    <span class="title" data-od-id="phone-title">戒蕴品</span>
+    <button class="pbtn" data-od-id="phone-catalogue" aria-label="书库" aria-pressed="true">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m16 6 4 14"/><path d="M12 6v14"/><path d="M8 8v12"/><path d="M4 4v16"/></svg>
+    </button>
+    <button class="pbtn" data-od-id="phone-sections" aria-label="章节目录" aria-pressed="true">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12h-8"/><path d="M21 6H8"/><path d="M21 18h-8"/><path d="M3 6v4c0 1.1.9 2 2 2h3"/><path d="M3 10v6c0 1.1.9 2 2 2h3"/></svg>
+    </button>
+    <button class="pbtn tr" data-od-id="phone-settings" aria-label="设置">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3.2"/><path d="M19.2 14.8a1.7 1.7 0 0 0 .34 1.9l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.7 1.7 0 0 0-2.89 1.2V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-2.9-1.17l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.7 1.7 0 0 0 3.2 14.8H3a2 2 0 1 1 0-4h.1A1.7 1.7 0 0 0 4.9 7.9l-.06-.06A2 2 0 1 1 7.67 5l.06.06a1.7 1.7 0 0 0 1.9.34H9.7a1.7 1.7 0 0 0 1-1.55V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 2.9 1.17l.06-.06A2 2 0 1 1 20.5 7.05l-.06.06a1.7 1.7 0 0 0-.34 1.9v.09a1.7 1.7 0 0 0 1.55 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.55 1z"/></svg>
+    </button>
+    <span class="avatar" data-od-id="phone-avatar" aria-label="账户">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="8.5" r="3.6"/><path d="M4.5 20.5a7.5 7.5 0 0 1 15 0"/></svg>
+    </span>
+  </header>
+
+  <div class="pread" data-od-id="phone-reader">
+    <p><span class="n">1.</span> <span class="w">Evaṃ</span> me <span class="w">sutaṃ</span> — ekaṃ <span class="w">samayaṃ</span> <span class="w">bhagavā</span> antarā ca rājagahaṃ antarā ca nāḷandaṃ addhānamaggappaṭipanno hoti mahatā bhikkhusaṅghena saddhiṃ pañcamattehi bhikkhusatehi.</p>
+    <p><span class="n">2.</span> Tatra kho <span class="w">bhagavā</span> pañcavaggiye bhikkhū āmantesi — anuttaraṃ <span class="w open">dhammacakkaṃ</span> pavattitaṃ, appaṭivattiyaṃ samaṇena vā brāhmaṇena vā devena vā mārena vā brahmunā vā kenaci vā lokasmiṃ.</p>
+    <div class="gline">
+      <span class="mark">释</span>
+      <span class="gchip num" data-od-id="phone-gloss"><span class="hz">dhammacakkaṃ</span><span>nt</span><span>法轮；佛法之教说</span></span>
+    </div>
+    <div class="gline">
+      <span class="mark">参</span>
+      <p class="ref">世尊于鹿野苑为五比丘转无上法轮；此法轮不为沙门、婆罗门、天、魔、梵及世间任何人所逆转。<span class="from">ePitaka 中译</span></p>
+    </div>
+  </div>
+
+  <div class="pfoot" data-od-id="phone-progress">
+    <span class="plbl num">6 / 1204</span>
+    <span class="track" role="progressbar" aria-valuenow="33" aria-valuemin="0" aria-valuemax="100" aria-label="本章进度"><i></i></span>
+    <span class="plbl num">0%</span>
+  </div>
+</div>
+
+<!-- ══════════ 设计规则 ══════════ -->
+<section class="rules" data-od-id="design-rules">
+  <div class="rcard">
+    <h2>设计规则</h2>
+    <div class="rgrid">
+      <div class="rrow"><span class="sw acc"></span><span>悬停一律是<b>底色变化 + 文字转色</b>，任何情况下都不出现下划线。</span></div>
+      <div class="rrow"><span class="sw acc"></span><span>焦点环固定为 <b>2px 墨蓝</b>，偏移 2px，不改变元素尺寸。</span></div>
+      <div class="rrow"><span class="sw acc"></span><span>墨蓝在阅读面上占比 <b>≤ 5%</b>：只给当前项、开着的词、焦点与一处强调。</span></div>
+      <div class="rrow"><span class="sw hd"></span><span>词典面板：<b>棕 = 词头</b>，正文与表中一律用 saddle brown 标识正在查的词。</span></div>
+      <div class="rrow"><span class="sw gr"></span><span>词典面板：<b>绿 = 点得动</b>，凡深绿处皆可继续查词，悬停转 #1a6b1a。</span></div>
+      <div class="rrow"><span class="sw am"></span><span>词典面板：<b>琥珀 = 命中的那一形</b>，只染形式本身，不染整格、不染整行。</span></div>
+      <div class="rrow"><span class="sw"></span><span>全站<b>不使用斜体</b>；需要强调时改颜色或加标签，字重上限 500。</span></div>
+      <div class="rrow"><span class="sw"></span><span>巴利语字号下限 <b>14px</b>；正文 19.5px / 1.8，窄屏同值，只重排不缩字。</span></div>
+    </div>
+    <p class="rnote">词典面板用一套更暖、更高对比的工具色：面板 #fdf8f2 · 词条 #fffcf8 · 悬停 #f8efe4 · 分隔 #eadfd0。这些颜色只出现在左侧词典里，不进阅读面。</p>
+  </div>
+</section>
+
+</body>
+</html>

@@ -1,0 +1,57 @@
+== how much text there was to place
+   books 176   this reader's words 9433562   mapped volumes' words 11982862   ratio 1.270
+   books whose volumes are larger than the book: 147   smaller: 29
+
+== the walk as it stands: forward search from a cursor, inside the paragraph's span
+   lines in the mapped volumes 1259503
+   lines the walk never looked at 423473 (33.62%) — their paragraph never located at all
+   lines it did look at 836030   placed 607055   unplaced 228975 (27.39% of looked-at, 18.18% of all)
+   placed as a share of every line the volumes hold: 48.20%
+     absent        165082   25.3% of unplaced, 13.11% of all lines
+     short          32458    5.0% of unplaced,  2.58% of all lines
+     after-span     18347    2.8% of unplaced,  1.46% of all lines
+     overshoot      12794    2.0% of unplaced,  1.02% of all lines
+     far              294    0.0% of unplaced,  0.02% of all lines
+
+== the anchor aligner: whole-book lookup of each line, monotone by construction
+   loose  (ambiguous opening resolved by position)
+     [accounting] lines 1259503 anchored 856503 unplaced() 403000 anchored+unplaced 1259503
+     anchored 856503 of 1259503 lines (68.00%), of those whole-line 714890 (56.76%), on four words 645428 (51.24%), weak 195837
+     unplaced 403000 (32.00%):  no verbatim opening 257823   contradicted 104329   short 40848   ambiguous 656668   too short to vouch for 0
+   strict (four-word openings only)
+     [accounting] lines 1259503 anchored 662136 unplaced() 597367 anchored+unplaced 1259503
+     anchored 662136 of 1259503 lines (52.57%), of those whole-line 581278 (46.15%), on four words 645481 (51.25%), weak 0
+     unplaced 597367 (47.43%):  no verbatim opening 540005   contradicted 16514   short 40848   ambiguous 589099   too short to vouch for 0
+   safe   (a short opening must be carried by more text)
+     [accounting] lines 1259503 anchored 797290 unplaced() 462213 anchored+unplaced 1259503
+     anchored 797290 of 1259503 lines (63.30%), of those whole-line 715025 (56.77%), on four words 645460 (51.25%), weak 136509
+     unplaced 462213 (36.70%):  no verbatim opening 257823   contradicted 33028   short 40848   ambiguous 638476   too short to vouch for 130514
+       (and 130514 lines found only behind an opening too short to vouch for)
+
+== lines stacked under one segment (the reader-visible defect)
+   a count is not on its own a fault: a verse is one segment holding
+   every row of the gatha, and ePitaka's own rows are sometimes long.
+   short+carried    699 segments over ten (prose 0, verse 699), worst 464 lines under one
+   2-word anchors   711 segments over ten (prose 3, verse 708), worst 464 lines under one
+   3-word anchors   682 segments over ten (prose 1, verse 681), worst 457 lines under one
+   4-word anchors   540 segments over ten (prose 0, verse 540), worst 423 lines under one
+
+== by how many ePitaka volumes feed the book
+   one volume       books 151  lines 1060050  walk  523509 ( 49.4%)  anchor  735295 ( 69.4%)
+   several volumes  books  25  lines  199453  walk   83546 ( 41.9%)  anchor  121208 ( 60.8%)
+
+== worst 12 books by lines the walk did not place
+   book                   vol    lines attempted unplaced    rate   causes
+   annya_vi_12              1    18716    15518     9370   50.1%   never-attempted=3198 absent=8750 after-span=114 far=1 overshoot=205 short=300
+   mula_bi_05               1    15465    15394     4633   30.0%   never-attempted=71 absent=333 after-span=312 far=9 overshoot=315 short=3664
+   annya_bi_03              1    10324     8655     4463   43.2%   never-attempted=1669 absent=4215 after-span=45 far=7 overshoot=82 short=114
+   annya_vi_10              1    14407     7232     4067   28.2%   never-attempted=7175 absent=3447 after-span=8 far=1 overshoot=147 short=464
+   tika_di_01_03            1     9209     8002     3998   43.4%   never-attempted=1207 absent=3717 after-span=8 far=4 overshoot=107 short=162
+   annya_bi_04              1    10862     9540     3929   36.2%   never-attempted=1322 absent=3609 after-span=34 far=10 overshoot=105 short=171
+   tika_ma_02               1    15536     6717     3896   25.1%   never-attempted=8819 absent=3626 after-span=70 far=2 overshoot=63 short=135
+   tika_sa_01               1     8085     6861     3734   46.2%   never-attempted=1224 absent=3361 after-span=255 far=3 overshoot=68 short=47
+   tika_di_02               1     7556     6489     3705   49.0%   never-attempted=1067 absent=3460 after-span=15 overshoot=51 short=179
+   tika_vi_03               4     9186     7863     3526   38.4%   never-attempted=1323 absent=2870 after-span=150 far=4 overshoot=183 short=319
+   tika_vi_02               1     8728     7361     3509   40.2%   never-attempted=1367 absent=3166 after-span=81 far=7 overshoot=101 short=154
+   tika_an_02               3     8603     7394     3342   38.8%   never-attempted=1209 absent=2798 after-span=241 far=2 overshoot=232 short=69
+

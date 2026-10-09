@@ -1,0 +1,1831 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>巴利三藏阅读器 · 高保真产品原型</title>
+<style>
+/* ═══════════════════════════════════════════════════════════════════
+   kami (紙 / 纸) — design token contract, pasted verbatim from tokens.css
+   ═══════════════════════════════════════════════════════════════════ */
+:root {
+  --bg: #f5f4ed;
+  --surface: #faf9f5;
+  --surface-warm: #e8e6dc;
+  --fg: #141413;
+  --fg-2: #3d3d3a;
+  --muted: #504e49;
+  --meta: #6b6a64;
+  --border: #e8e6dc;
+  --border-soft: #e5e3d8;
+  --accent: #1b365d;
+  --accent-on: #faf9f5;
+  --accent-light: #2d5a8a;
+  --accent-hover: var(--accent);
+  --accent-active: #142a48;
+  --success: #4a6b3a;
+  --warn: #8a6b1f;
+  --danger: #8a3a30;
+  --font-display: Charter, Georgia, Palatino, "Times New Roman", serif;
+  --font-body: Charter, Georgia, Palatino, "Times New Roman", serif;
+  --font-mono: "JetBrains Mono", "SF Mono", "Fira Code", Consolas, Monaco,
+    "TsangerJinKai02", "Source Han Serif SC", monospace;
+  --text-xs: 11px;
+  --text-sm: 12px;
+  --text-base: 14px;
+  --text-md: 15px;
+  --text-lg: 17px;
+  --text-xl: 22px;
+  --text-2xl: 32px;
+  --text-3xl: 48px;
+  --text-4xl: 96px;
+  --leading-display: 1.1;
+  --leading-tight: 1.25;
+  --leading-body: 1.55;
+  --leading-dense: 1.4;
+  --tracking-display: -1.2px;
+  --tracking-eyebrow: 1.2px;
+  --tracking-label: 0.4px;
+  --space-1: 4px;  --space-2: 8px;  --space-3: 12px; --space-4: 16px;
+  --space-5: 20px; --space-6: 24px; --space-7: 28px; --space-8: 32px;
+  --space-12: 48px; --space-18: 72px; --space-22: 88px;
+  --section-y-desktop: 72px; --section-y-tablet: 48px; --section-y-phone: 32px;
+  --radius-xs: 2px; --radius-sm: 4px; --radius-md: 8px;
+  --radius-lg: 12px; --radius-xl: 16px; --radius-pill: 9999px;
+  --elev-flat: none;
+  --elev-ring: 0 0 0 1px var(--border);
+  --elev-ring-accent: 0 0 0 1px var(--accent);
+  --elev-raised: 0 4px 24px rgba(0, 0, 0, 0.05);
+  --focus-ring: 0 0 0 2px var(--accent-active);
+  --motion-fast: 150ms; --motion-base: 200ms;
+  --ease-standard: cubic-bezier(0.2, 0, 0, 1);
+  --container-max: 1120px;
+  --container-gutter-desktop: 64px;
+  --container-gutter-tablet: 32px;
+  --container-gutter-phone: 16px;
+  --tag-bg-faint: #eef2f7;
+  --tag-bg-soft: #e4ecf5;
+  --tag-bg-base: #d6e1ee;
+  --tag-bg-strong: #d0dce9;
+}
+:root[lang="zh-CN"], :root[lang="zh"] {
+  --font-display: "TsangerJinKai02", "Source Han Serif SC", "Noto Serif CJK SC",
+    "Songti SC", "STSong", Georgia, serif;
+  --font-body: "TsangerJinKai02", "Source Han Serif SC", "Noto Serif CJK SC",
+    "Songti SC", "STSong", Georgia, serif;
+}
+/* Latin-script surface: Pali source text keeps the Latin serif stack so
+   diacritics resolve in Charter/Georgia instead of a CJK fallback. */
+.pi, .ipa {
+  font-family: Charter, Georgia, Palatino, "Times New Roman", serif;
+  font-feature-settings: "kern" 1;
+}
+
+/* ── reset ─────────────────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; }
+body {
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--font-body);
+  font-size: var(--text-base);
+  line-height: var(--leading-body);
+  -webkit-font-smoothing: antialiased;
+}
+button { font: inherit; color: inherit; background: none; border: 0; padding: 0; cursor: pointer; }
+input, textarea { font: inherit; color: inherit; }
+strong, b { font-weight: 500; }
+h1, h2, h3, h4, p, ul, ol, figure { margin: 0; }
+ul { padding: 0; list-style: none; }
+:where(button, a, input, textarea, [tabindex]):focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: var(--radius-xs);
+}
+.num, .tabnum { font-variant-numeric: tabular-nums; }
+.ic { width: 18px; height: 18px; flex: none; display: block; }
+.ic-sm { width: 14px; height: 14px; }
+.ic-lg { width: 22px; height: 22px; }
+.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+/* ═══════════════════════════════════════════════════════════════════
+   Prototype chrome — screen switcher
+   ═══════════════════════════════════════════════════════════════════ */
+.proto-bar {
+  position: sticky; top: 0; z-index: 60;
+  display: flex; align-items: center; gap: 18px;
+  padding: 9px 22px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+}
+.proto-title { font-size: 13px; font-weight: 500; letter-spacing: 0.3px; white-space: nowrap; }
+.proto-title span { color: var(--meta); font-weight: 400; }
+.proto-tabs { display: flex; gap: 2px; padding: 3px; background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius-md); }
+.proto-tab {
+  display: flex; align-items: center; gap: 7px;
+  padding: 7px 13px; border-radius: 5px;
+  font-size: 12px; font-weight: 500; letter-spacing: 0.35px; color: var(--fg-2);
+  transition: background var(--motion-fast) var(--ease-standard), color var(--motion-fast) var(--ease-standard);
+}
+.proto-tab:hover { background: var(--surface-warm); color: var(--fg); }
+.proto-tab[aria-selected="true"] { background: var(--accent); color: var(--accent-on); }
+.proto-tab[aria-selected="true"]:hover { background: var(--accent-active); color: var(--accent-on); }
+.proto-tab .tn { font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.4px; opacity: 0.7; font-variant-numeric: tabular-nums; }
+.proto-note { margin-left: auto; font-size: 11px; color: var(--meta); letter-spacing: 0.3px; }
+
+/* ═══════════════════════════════════════════════════════════════════
+   Stage
+   ═══════════════════════════════════════════════════════════════════ */
+.stage-wrap { display: flex; justify-content: center; padding: 26px 18px 76px; }
+.stage {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  box-shadow: var(--elev-raised);
+  flex: none;
+}
+.stage-desk { width: 1440px; }
+.stage-s1 { height: 900px; display: flex; flex-direction: column; }
+.stage-phone { width: 390px; height: 844px; }
+.screen[hidden] { display: none; }
+@media (max-width: 1500px) { .stage-desk { zoom: 0.92; } }
+@media (max-width: 1360px) { .stage-desk { zoom: 0.83; } }
+@media (max-width: 1200px) { .stage-desk { zoom: 0.72; } }
+@media (max-width: 1020px) { .stage-desk { zoom: 0.58; } }
+@media (max-width: 820px)  { .stage-desk { zoom: 0.44; } }
+
+/* ═══════════════════════════════════════════════════════════════════
+   Shared app chrome — top bar
+   ═══════════════════════════════════════════════════════════════════ */
+.appbar {
+  flex: none; height: 56px;
+  display: flex; align-items: center; gap: 16px;
+  padding: 0 14px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+}
+.brand { display: flex; align-items: center; gap: 9px; flex: none; }
+.brand .mark {
+  width: 28px; height: 28px; border-radius: var(--radius-sm);
+  display: grid; place-items: center;
+  color: var(--accent); box-shadow: var(--elev-ring);
+}
+.brand .nm { font-size: 14px; font-weight: 500; letter-spacing: 0.3px; white-space: nowrap; }
+.crumbs { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--meta); min-width: 0; }
+.crumbs li { display: flex; align-items: center; gap: 6px; white-space: nowrap; }
+.crumbs .sep { color: var(--border); }
+.crumbs .cur { color: var(--fg-2); font-weight: 500; }
+.searchwrap { flex: 1; display: flex; justify-content: center; min-width: 0; }
+.search {
+  display: flex; align-items: center; gap: 9px;
+  width: 100%; max-width: 420px; height: 34px;
+  padding: 0 9px 0 11px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  color: var(--meta);
+  transition: border-color var(--motion-fast) var(--ease-standard);
+}
+.search:focus-within { border-color: var(--accent); }
+.search input { flex: 1; min-width: 0; border: 0; background: transparent; outline: none; font-size: 13px; color: var(--fg); }
+.search input::placeholder { color: var(--meta); }
+.kbd {
+  font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.4px;
+  padding: 2px 6px; border: 1px solid var(--border); border-radius: var(--radius-sm);
+  background: var(--surface); color: var(--meta); white-space: nowrap;
+}
+.bar-actions { display: flex; align-items: center; gap: 2px; flex: none; }
+.iconbtn {
+  width: 34px; height: 34px; border-radius: var(--radius-md);
+  display: grid; place-items: center; color: var(--fg-2);
+  transition: background var(--motion-fast) var(--ease-standard), color var(--motion-fast) var(--ease-standard);
+}
+.iconbtn:hover { background: var(--surface-warm); color: var(--fg); }
+.iconbtn[aria-pressed="true"] { background: var(--tag-bg-soft); color: var(--accent); }
+.avatar {
+  width: 30px; height: 30px; border-radius: var(--radius-pill);
+  display: grid; place-items: center;
+  background: var(--surface-warm); color: var(--fg-2);
+  font-size: 12px; font-weight: 500; line-height: 1;
+  box-shadow: var(--elev-ring);
+  margin-left: 4px;
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   Screen 1 — reading workspace
+   ═══════════════════════════════════════════════════════════════════ */
+.ws { flex: 1; min-height: 0; display: grid; grid-template-columns: 224px minmax(0, 1fr) 204px 372px; }
+.ws.collapsed { grid-template-columns: 56px minmax(0, 1fr) 204px 372px; }
+
+/* left: catalog tree */
+.tree { display: flex; flex-direction: column; min-height: 0; border-right: 1px solid var(--border); }
+.tree-head {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 10px 8px 8px 14px; border-bottom: 1px solid var(--border-soft);
+}
+.eyebrow {
+  font-size: 11px; font-weight: 500; letter-spacing: var(--tracking-eyebrow);
+  text-transform: uppercase; color: var(--meta);
+}
+.tree-scroll { flex: 1; overflow-y: auto; padding: 10px 8px 12px; }
+.tnode {
+  display: flex; align-items: center; gap: 7px; width: 100%;
+  padding: 6px 6px 6px 6px; border-radius: var(--radius-sm);
+  text-align: left; color: var(--fg-2); line-height: 1.35;
+  transition: background var(--motion-fast) var(--ease-standard);
+}
+.tnode:hover { background: var(--surface-warm); color: var(--fg); }
+.tnode .chev { color: var(--meta); transition: transform var(--motion-base) var(--ease-standard); }
+.tnode[aria-expanded="true"] .chev { transform: rotate(90deg); }
+.tnode .lbl { flex: 1; min-width: 0; font-size: 13px; }
+.tnode .sub { display: block; font-size: 11px; color: var(--meta); }
+.tnode.is-cur {
+  color: var(--accent);
+  background: var(--tag-bg-faint);
+  box-shadow: inset 2px 0 0 var(--accent);
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+}
+.tnode.is-cur:hover { background: var(--tag-bg-soft); color: var(--accent); }
+.tnode.is-cur .lbl { font-weight: 500; }
+.tnode.is-cur .sub { color: var(--accent); opacity: 0.75; }
+.tgroup { padding-left: 15px; border-left: 1px solid var(--border-soft); margin-left: 12px; }
+.tgroup[hidden] { display: none; }
+.trail {
+  display: flex; flex-direction: column; align-items: center; gap: 4px;
+  padding: 10px 0; border-bottom: 1px solid var(--border-soft);
+}
+.trail .iconbtn { width: 36px; height: 36px; }
+.trail[hidden] { display: none; }
+.tree-full[hidden] { display: none; }
+
+.progress {
+  flex: none; display: flex; align-items: center; gap: 11px;
+  padding: 12px 14px; border-top: 1px solid var(--border);
+}
+.ring { width: 38px; height: 38px; flex: none; }
+.ring circle { fill: none; stroke-width: 3; }
+.ring .t { stroke: var(--border); }
+.ring .v { stroke: var(--accent); stroke-linecap: round; transform: rotate(-90deg); transform-origin: 19px 19px; }
+.progress .pn { font-size: 14px; font-weight: 500; font-variant-numeric: tabular-nums; line-height: 1.2; }
+.progress .pl { font-size: 11px; color: var(--meta); letter-spacing: 0.2px; }
+
+/* centre: reading surface */
+.reader { min-height: 0; overflow-y: auto; padding: 22px 18px 80px; }
+.measure { max-width: 720px; margin: 0 auto; display: flex; flex-direction: column; gap: 16px; }
+.pcard {
+  position: relative;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 20px 14px 18px 42px;
+  transition: box-shadow var(--motion-base) var(--ease-standard);
+}
+.pcard:hover { box-shadow: var(--elev-raised); }
+.pnum {
+  position: absolute; left: 14px; top: 22px;
+  font-size: 13px; font-weight: 500; color: var(--accent);
+  font-variant-numeric: tabular-nums; letter-spacing: 0.3px;
+}
+.pali { font-size: 18px; line-height: 1.7; color: var(--fg); }
+.w {
+  display: inline;
+  border-bottom: 1px dotted color-mix(in oklab, var(--surface-warm) 42%, var(--muted));
+  transition: color var(--motion-fast) var(--ease-standard), border-color var(--motion-fast) var(--ease-standard);
+}
+.w:hover { color: var(--accent); border-bottom-color: var(--accent); }
+.cmp { border-radius: var(--radius-xs); padding: 0 3px; }
+.cmp .w { border-bottom-color: transparent; }
+.cmp .w:hover { color: var(--accent); border-bottom-color: transparent; }
+.w.is-sel, .cmp.is-sel {
+  background: var(--tag-bg-soft); color: var(--accent);
+  border-bottom-color: transparent; border-radius: var(--radius-xs);
+}
+.w.is-sel { padding: 0 2px; }
+.cmp.is-sel .w { color: var(--accent); }
+.cmp.is-sel .w:hover { color: var(--accent-active); }
+.plus { color: var(--accent); opacity: 0.5; font-size: 0.82em; padding: 0 1px; }
+.splitmark {
+  display: inline-block; vertical-align: 2px; margin-left: 3px;
+  font-size: 10px; line-height: 1; letter-spacing: 0.3px;
+  padding: 2px 4px; border-radius: var(--radius-xs);
+  background: var(--tag-bg-base); color: var(--accent);
+}
+.plabel {
+  flex: none; font-size: 11px; line-height: 1.6; letter-spacing: 0.3px;
+  padding: 0 5px; border-radius: var(--radius-xs);
+  background: var(--tag-bg-faint); color: var(--accent);
+}
+.plabel.q { background: var(--surface-warm); color: var(--fg-2); }
+.glosswrap { display: flex; gap: 8px; align-items: flex-start; margin-top: 13px; }
+.glosses { display: flex; flex-wrap: wrap; gap: 5px; }
+.gchip {
+  background: var(--tag-bg-faint); color: var(--muted);
+  padding: 2px 8px; border-radius: var(--radius-sm);
+  font-size: 13px; line-height: 1.5;
+}
+.gchip i { font-style: normal; color: var(--accent); }
+.line { display: flex; gap: 8px; align-items: flex-start; margin-top: 11px; }
+.line .txt { font-size: 13.5px; line-height: 1.62; color: var(--muted); }
+.line .src { font-size: 11px; color: var(--meta); letter-spacing: 0.2px; margin-left: 6px; }
+.mine {
+  display: block; width: 100%; resize: none;
+  border: 1px dashed var(--border); border-radius: var(--radius-sm);
+  background: transparent; padding: 8px 10px;
+  font-size: 13.5px; line-height: 1.6; color: var(--fg-2);
+  min-height: 40px; outline: none;
+  transition: border-color var(--motion-fast) var(--ease-standard);
+}
+.mine::placeholder { color: var(--meta); }
+.mine:focus { border-color: var(--accent); border-style: solid; }
+.minewrap { margin-top: 11px; }
+.save-state {
+  display: inline-flex; align-items: center; gap: 4px;
+  margin-top: 5px; font-size: 11px; color: var(--meta); letter-spacing: 0.2px;
+}
+.save-state.is-dirty { color: var(--warn); }
+.annot { display: flex; gap: 7px; align-items: flex-start; margin-top: 12px; padding-top: 11px; border-top: 1px solid var(--border-soft); }
+.av {
+  width: 20px; height: 20px; flex: none; border-radius: var(--radius-pill);
+  display: grid; place-items: center; background: var(--surface-warm); color: var(--fg-2);
+  font-size: 11px; line-height: 1;
+}
+.annot .who { font-size: 11px; color: var(--meta); letter-spacing: 0.2px; }
+.annot .body { font-size: 13px; color: var(--fg-2); line-height: 1.6; }
+.ghostlink {
+  display: inline-flex; align-items: center; gap: 5px;
+  font-size: 12px; color: var(--accent); letter-spacing: 0.3px;
+  padding: 5px 8px; margin: -5px 0 -5px -8px; border-radius: var(--radius-sm);
+  transition: background var(--motion-fast) var(--ease-standard);
+}
+.ghostlink:hover { background: var(--tag-bg-faint); color: var(--accent-active); }
+
+/* right: toc + vocabulary */
+.rail { min-height: 0; overflow-y: auto; border-left: 1px solid var(--border); padding: 14px 12px 18px; }
+.rail + .lookup { border-left: 0; }
+.railsec + .railsec { margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--border-soft); }
+.railhead { display: flex; align-items: center; justify-content: space-between; margin-bottom: 9px; }
+.toc-item {
+  display: block; width: 100%; text-align: left;
+  padding: 6px 8px 6px 10px; border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+  color: var(--fg-2); font-size: 12.5px; line-height: 1.4;
+  transition: background var(--motion-fast) var(--ease-standard);
+}
+.toc-item:hover { background: var(--surface-warm); color: var(--fg); }
+.toc-item .tn { display: block; font-size: 10.5px; color: var(--meta); font-variant-numeric: tabular-nums; letter-spacing: 0.3px; }
+.toc-item.is-active { color: var(--accent); box-shadow: inset 2px 0 0 var(--accent); background: var(--tag-bg-faint); }
+.toc-item.is-active .tn { color: var(--accent); opacity: 0.8; }
+.toc-item.is-active:hover { background: var(--tag-bg-soft); color: var(--accent); }
+.vocab { display: flex; flex-direction: column; gap: 2px; }
+.vitem {
+  display: flex; align-items: baseline; gap: 6px; width: 100%; text-align: left;
+  padding: 5px 7px; border-radius: var(--radius-sm);
+  transition: background var(--motion-fast) var(--ease-standard);
+}
+.vitem:hover { background: var(--surface-warm); }
+.vitem .vw { font-family: Charter, Georgia, serif; font-size: 11.5px; color: var(--fg-2); flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.vitem .vt { font-size: 10px; letter-spacing: 0.3px; color: var(--meta); flex: none; }
+
+/* ═══════════════════════════════════════════════════════════════════
+   Word lookup panel (shared by screen 1 dock + screen 2 sheet body)
+   ═══════════════════════════════════════════════════════════════════ */
+.lookup { min-height: 0; padding: 12px 12px 12px 0; }
+.panel {
+  height: 100%; display: flex; flex-direction: column; min-height: 0;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--elev-raised);
+  overflow: hidden;
+}
+.panel-head { flex: none; padding: 12px 14px 10px; border-bottom: 1px solid var(--border-soft); }
+.panel-head .row1 { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.recent { display: flex; align-items: center; gap: 4px; margin-top: 9px; flex-wrap: wrap; }
+.rchip {
+  display: inline-flex; align-items: center; gap: 4px;
+  font-family: Charter, Georgia, serif; font-size: 11.5px; line-height: 1.5;
+  padding: 2px 7px; border-radius: var(--radius-xs);
+  background: var(--tag-bg-faint); color: var(--muted);
+  transition: background var(--motion-fast) var(--ease-standard), color var(--motion-fast) var(--ease-standard);
+}
+.rchip:hover { background: var(--tag-bg-base); color: var(--fg); }
+.rchip.is-open { background: var(--tag-bg-soft); color: var(--accent); box-shadow: inset 0 0 0 1px var(--tag-bg-base); }
+.rchip .dot { width: 4px; height: 4px; border-radius: 50%; background: var(--accent); flex: none; }
+.rchip .tagmark { font-family: var(--font-body); font-size: 9.5px; letter-spacing: 0.3px; color: var(--accent); opacity: 0.85; padding-left: 2px; }
+.headword { font-size: 26px; font-weight: 500; line-height: 1.2; color: var(--fg); letter-spacing: 0.2px; margin-top: 9px; }
+.ipa { font-size: 13px; color: var(--meta); margin-top: 3px; letter-spacing: 0.2px; }
+.chips { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 9px; }
+.chip {
+  font-size: 11px; line-height: 1.5; letter-spacing: var(--tracking-label);
+  padding: 2px 7px; border-radius: var(--radius-xs);
+  background: var(--tag-bg-soft); color: var(--accent);
+}
+.chip.plain { background: var(--surface-warm); color: var(--fg-2); }
+.tabs { flex: none; display: flex; gap: 16px; padding: 0 14px; border-bottom: 1px solid var(--border); }
+.tab {
+  padding: 9px 1px 8px; margin-bottom: -1px;
+  font-size: 13px; font-weight: 500; letter-spacing: 0.3px; color: var(--muted);
+  border-bottom: 2px solid transparent;
+  transition: color var(--motion-fast) var(--ease-standard), border-color var(--motion-fast) var(--ease-standard);
+}
+.tab:hover { color: var(--fg); }
+.tab[aria-selected="true"] { color: var(--accent); border-bottom-color: var(--accent); }
+.panel-body { flex: 1; min-height: 0; overflow-y: auto; padding: 12px 14px 14px; }
+.panel-body section + section { margin-top: 15px; padding-top: 14px; border-top: 1px solid var(--border-soft); }
+.sechead { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; margin-bottom: 8px; }
+.sectitle { font-size: 12px; font-weight: 500; letter-spacing: 0.5px; color: var(--fg-2); }
+.secmeta { font-size: 11px; color: var(--meta); font-variant-numeric: tabular-nums; }
+.mean {
+  display: flex; gap: 9px; width: 100%; text-align: left;
+  padding: 9px 10px; border-radius: var(--radius-md);
+  border: 1px solid var(--border-soft);
+  transition: background var(--motion-fast) var(--ease-standard), border-color var(--motion-fast) var(--ease-standard);
+}
+.mean + .mean { margin-top: 6px; }
+.mean:hover { background: var(--surface-warm); border-color: var(--border); }
+.mean.is-on { background: var(--tag-bg-soft); border-color: var(--tag-bg-base); }
+.radio { width: 15px; height: 15px; flex: none; margin-top: 2px; border-radius: 50%; box-shadow: inset 0 0 0 1px var(--meta); display: grid; place-items: center; }
+.mean.is-on .radio { box-shadow: inset 0 0 0 1px var(--accent); }
+.mean.is-on .radio::after { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--accent); }
+.mean .dict { font-size: 11px; letter-spacing: 0.4px; color: var(--meta); display: flex; gap: 6px; align-items: baseline; }
+.mean .dict b { color: var(--fg-2); font-weight: 500; }
+.mean.is-on .dict b { color: var(--accent); }
+.mean .en { display: block; font-family: Charter, Georgia, serif; font-size: 13.5px; line-height: 1.5; color: var(--fg); margin-top: 3px; }
+.mean .zh { display: block; font-size: 12.5px; line-height: 1.6; color: var(--muted); margin-top: 2px; }
+.cchips { display: flex; flex-wrap: wrap; gap: 6px; }
+.cchip {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 5px 9px; border-radius: var(--radius-md);
+  border: 1px solid var(--border); background: var(--surface);
+  font-family: Charter, Georgia, serif; font-size: 13px; color: var(--fg);
+  transition: background var(--motion-fast) var(--ease-standard), border-color var(--motion-fast) var(--ease-standard), color var(--motion-fast) var(--ease-standard);
+}
+.cchip:hover { background: var(--tag-bg-faint); border-color: var(--tag-bg-base); color: var(--accent); }
+.cchip .part-of { font-family: var(--font-body); font-size: 10px; color: var(--meta); letter-spacing: 0.3px; }
+.cchip.alt { color: var(--muted); }
+.cchip.alt .op { color: var(--meta); padding: 0 1px; }
+.caption { font-size: 11px; color: var(--meta); margin-top: 7px; letter-spacing: 0.2px; }
+.dtable { width: 100%; border-collapse: collapse; font-size: 11.5px; }
+.dtable th, .dtable td { text-align: left; padding: 3.5px 5px; border-bottom: 1px solid var(--border-soft); font-variant-numeric: tabular-nums; }
+.dtable th { font-weight: 500; color: var(--meta); font-size: 10.5px; letter-spacing: 0.3px; }
+.dtable th:first-child, .dtable td:first-child { color: var(--meta); width: 34px; font-size: 10.5px; }
+.dtable td { font-family: Charter, Georgia, serif; font-size: 11px; color: var(--fg-2); overflow-wrap: anywhere; }
+.dtable td .v2 { color: var(--meta); }
+.dtable tr.is-hit td { background: var(--tag-bg-soft); color: var(--accent); }
+.dtable tr.is-hit td:first-child { color: var(--accent); }
+.gtable { width: 100%; border-collapse: collapse; font-size: 12px; }
+.gtable th { text-align: left; font-weight: 500; color: var(--meta); font-size: 11px; letter-spacing: 0.3px; padding: 4px 8px 4px 0; width: 78px; vertical-align: top; }
+.gtable td { padding: 4px 0; color: var(--fg-2); font-size: 12.5px; line-height: 1.5; }
+.gtable td .pi { font-size: 12.5px; }
+.famitem { display: flex; gap: 8px; align-items: baseline; padding: 5px 0; border-bottom: 1px solid var(--border-soft); }
+.famitem .fw { font-family: Charter, Georgia, serif; font-size: 13px; color: var(--fg); flex: none; }
+.famitem .fg { font-size: 12px; color: var(--muted); }
+.panel-foot { flex: none; display: flex; align-items: center; gap: 6px; padding: 10px 14px; border-top: 1px solid var(--border); background: var(--surface); }
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  padding: 8px 13px; border-radius: var(--radius-md);
+  font-size: 12px; font-weight: 500; letter-spacing: var(--tracking-label); line-height: 1;
+  transition: background var(--motion-fast) var(--ease-standard), color var(--motion-fast) var(--ease-standard), box-shadow var(--motion-fast) var(--ease-standard);
+}
+.btn-primary { background: var(--accent); color: var(--accent-on); box-shadow: var(--elev-ring-accent); }
+.btn-primary:hover { background: var(--accent-active); color: var(--accent-on); }
+.btn-secondary { background: var(--surface-warm); color: var(--fg-2); box-shadow: var(--elev-ring); }
+.btn-secondary:hover { background: var(--border); color: var(--fg); }
+.btn-ghost { color: var(--accent); box-shadow: var(--elev-ring-accent); }
+.btn-ghost:hover { background: var(--tag-bg-faint); color: var(--accent-active); }
+.btn-quiet { color: var(--fg-2); box-shadow: var(--elev-ring); }
+.btn-quiet:hover { background: var(--surface-warm); color: var(--fg); }
+.btn[disabled] { color: var(--meta); background: var(--surface-warm); box-shadow: none; cursor: not-allowed; }
+.btn:hover { transform: none; }
+.panel-foot .spacer { flex: 1; }
+.provenance { font-size: 10.5px; color: var(--meta); line-height: 1.5; margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--border-soft); }
+
+/* ═══════════════════════════════════════════════════════════════════
+   Screen 2 — mobile reader
+   ═══════════════════════════════════════════════════════════════════ */
+.phone { position: relative; width: 390px; height: 844px; display: flex; flex-direction: column; background: var(--bg); overflow: hidden; }
+.mbar { flex: none; height: 52px; display: flex; align-items: center; gap: 8px; padding: 0 8px; background: var(--surface); border-bottom: 1px solid var(--border); }
+.mbar .title { flex: 1; min-width: 0; font-size: 14px; font-weight: 500; }
+.mbar .title span { display: block; font-size: 11px; color: var(--meta); font-weight: 400; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tap { min-width: 44px; min-height: 44px; display: grid; place-items: center; border-radius: var(--radius-md); color: var(--fg-2); }
+.tap:hover { background: var(--surface-warm); color: var(--fg); }
+.mreader { flex: 1; min-height: 0; overflow: hidden; padding: 16px 16px 0; }
+.mcard { padding-bottom: 20px; }
+.mcard .pnum { position: static; display: block; font-size: 12px; margin-bottom: 4px; }
+.mpali { font-size: 19px; line-height: 1.75; color: var(--fg); }
+.mgloss { margin-top: 10px; display: flex; gap: 7px; align-items: flex-start; }
+.msmall { font-size: 12.5px; line-height: 1.6; color: var(--muted); margin-top: 7px; }
+.scrim { position: absolute; left: 0; right: 0; top: 52px; bottom: 0; background: rgba(20, 20, 19, 0.24); }
+.sheet {
+  position: absolute; left: 0; right: 0; bottom: 0; height: 55%;
+  display: flex; flex-direction: column; min-height: 0;
+  background: var(--surface);
+  border-top: 1px solid var(--border);
+  border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+  box-shadow: 0 -4px 24px rgba(0, 0, 0, 0.05);
+  overflow: hidden;
+}
+.grip { flex: none; padding: 8px 0 2px; display: grid; place-items: center; }
+.grip i { display: block; width: 36px; height: 4px; border-radius: var(--radius-pill); background: var(--border); }
+.sheet-head { flex: none; padding: 6px 16px 0; }
+.sheet-body { flex: 1; min-height: 0; overflow-y: auto; padding: 0 16px 12px; }
+.sheet-foot { flex: none; display: flex; align-items: center; gap: 8px; padding: 10px 16px 8px; border-top: 1px solid var(--border); }
+.sheet-foot .btn { flex: 1; padding: 12px 13px; min-height: 44px; }
+.home-ind { flex: none; height: 26px; display: grid; place-items: center; }
+.home-ind i { display: block; width: 134px; height: 5px; border-radius: var(--radius-pill); background: var(--fg); opacity: 0.28; }
+/* touch targets inside the mobile sheet */
+.sheet .tab { min-height: 44px; display: flex; align-items: center; }
+.sheet .rchip { min-height: 34px; padding: 5px 10px; font-size: 12px; }
+.sheet .cchip { min-height: 38px; padding: 8px 11px; }
+.sheet .ghostlink { min-height: 40px; align-items: center; }
+.sheet .mean { padding: 11px 11px; }
+
+/* ═══════════════════════════════════════════════════════════════════
+   Screen 3 — catalog home · Screen 4 — tokens
+   ═══════════════════════════════════════════════════════════════════ */
+.page { width: 100%; }
+.shell { max-width: var(--container-max); margin: 0 auto; padding: 52px var(--container-gutter-desktop) 0; }
+.hero-eyebrow { display: block; }
+h1.hero { font-size: 58px; font-weight: 500; line-height: 1.22; letter-spacing: 0.4px; margin-top: 14px; }
+.lede { font-size: 16px; line-height: 1.7; color: var(--muted); max-width: 620px; margin-top: 14px; }
+.metrics { display: flex; flex-wrap: wrap; gap: 0; margin-top: 26px; border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); }
+.metric { padding: 14px 30px 14px 0; margin-right: 30px; border-right: 1px solid var(--border); }
+.metric:last-child { border-right: 0; margin-right: 0; }
+.metric .mv { display: flex; align-items: baseline; gap: 5px; font-size: 24px; font-weight: 500; color: var(--accent); font-variant-numeric: tabular-nums; line-height: 1.1; }
+.metric .mu { font-size: 12px; color: var(--meta); }
+.metric .ml { font-size: 12px; color: var(--muted); margin-top: 3px; letter-spacing: 0.2px; }
+.block { margin-top: 56px; }
+.section-head { display: flex; align-items: baseline; gap: 12px; }
+.section-num { font-size: 12px; font-weight: 500; color: var(--accent); letter-spacing: var(--tracking-label); font-variant-numeric: tabular-nums; }
+.section-title { font-size: 26px; font-weight: 500; line-height: 1.3; letter-spacing: 0.3px; }
+.resume {
+  display: flex; align-items: center; gap: 22px;
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg);
+  padding: 22px 24px; margin-top: 18px;
+  transition: box-shadow var(--motion-base) var(--ease-standard);
+}
+.resume:hover { box-shadow: var(--elev-raised); }
+.resume .rinfo { flex: 1; min-width: 0; }
+.resume .rbook { font-size: 18px; font-weight: 500; letter-spacing: 0.2px; }
+.resume .rmeta { font-size: 12px; color: var(--meta); margin-top: 3px; letter-spacing: 0.2px; }
+.resume .rpassage { font-family: Charter, Georgia, serif; font-size: 13.5px; line-height: 1.6; color: var(--muted); margin-top: 8px; max-width: 520px; }
+.grid3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 18px; margin-top: 18px; }
+.basket {
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg);
+  padding: 24px 22px 18px; display: flex; flex-direction: column;
+  transition: box-shadow var(--motion-base) var(--ease-standard);
+}
+.basket:hover { box-shadow: var(--elev-raised); }
+.basket .bhead { display: flex; align-items: flex-start; gap: 12px; }
+.basket .bicon { color: var(--accent); flex: none; margin-top: 2px; }
+.basket .btitle { font-size: 19px; font-weight: 500; letter-spacing: 0.3px; }
+.basket .bsub { font-family: Charter, Georgia, serif; font-size: 12.5px; color: var(--meta); margin-top: 1px; }
+.basket .bcount { font-size: 12px; color: var(--muted); margin-top: 5px; font-variant-numeric: tabular-nums; }
+.brows { margin-top: 16px; border-top: 1px solid var(--border-soft); }
+.brow {
+  display: flex; align-items: center; gap: 10px; width: 100%; text-align: left;
+  padding: 10px 0; border-bottom: 1px solid var(--border-soft);
+  transition: color var(--motion-fast) var(--ease-standard);
+}
+.brow:last-child { border-bottom: 0; }
+.brow:hover { color: var(--accent); }
+.brow .bn { flex: 1; font-size: 13.5px; }
+.brow .bn i { font-style: normal; display: block; font-family: Charter, Georgia, serif; font-size: 11.5px; color: var(--meta); }
+.brow:hover .bn i { color: var(--accent); opacity: 0.8; }
+.brow .ic { color: var(--meta); }
+.brow:hover .ic { color: var(--accent); }
+.chipstrip { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px; }
+.wchip {
+  display: inline-flex; align-items: baseline; gap: 6px;
+  padding: 7px 11px; border-radius: var(--radius-md);
+  border: 1px solid var(--border); background: var(--surface);
+  transition: background var(--motion-fast) var(--ease-standard), border-color var(--motion-fast) var(--ease-standard);
+}
+.wchip:hover { background: var(--tag-bg-faint); border-color: var(--tag-bg-base); }
+.wchip .cw { font-family: Charter, Georgia, serif; font-size: 13.5px; color: var(--fg); }
+.wchip:hover .cw { color: var(--accent); }
+.wchip .ct { font-size: 10px; letter-spacing: 0.4px; color: var(--meta); }
+.foot { margin-top: 64px; border-top: 1px solid var(--border); padding: 22px 0 40px; }
+.foot .fgrid { display: flex; gap: 30px; flex-wrap: wrap; align-items: baseline; }
+.foot p { font-size: 12px; color: var(--meta); line-height: 1.7; }
+.foot .fmark { display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 500; color: var(--fg-2); }
+
+/* tokens page */
+.swatches { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; margin-top: 18px; }
+.swatch .box { height: 74px; border-radius: var(--radius-md); box-shadow: var(--elev-ring); }
+.swatch .hex { font-family: var(--font-mono); font-size: 11.5px; color: var(--fg-2); margin-top: 9px; letter-spacing: 0.2px; text-transform: uppercase; }
+.swatch .role { font-size: 12px; color: var(--muted); margin-top: 2px; }
+.swatch .tok { font-family: var(--font-mono); font-size: 10.5px; color: var(--meta); margin-top: 1px; }
+.spec { display: flex; align-items: baseline; gap: 20px; padding: 12px 0; border-bottom: 1px solid var(--border-soft); }
+.spec .si { flex: none; width: 108px; font-family: var(--font-mono); font-size: 10.5px; color: var(--meta); letter-spacing: 0.2px; }
+.spec .sd { flex: 1; min-width: 0; }
+.spec .sn { flex: none; font-size: 11px; color: var(--meta); font-variant-numeric: tabular-nums; }
+.bars { display: flex; flex-direction: column; gap: 9px; margin-top: 18px; }
+.bar { display: flex; align-items: center; gap: 12px; }
+.bar .bl { flex: none; width: 76px; font-family: var(--font-mono); font-size: 11px; color: var(--meta); }
+.bar i { display: block; height: 12px; border-radius: var(--radius-xs); background: var(--tag-bg-base); }
+.bar .bv { font-size: 11px; color: var(--meta); font-variant-numeric: tabular-nums; }
+.radii { display: flex; gap: 22px; flex-wrap: wrap; margin-top: 18px; }
+.radii figure { text-align: center; }
+.radii .rsq { width: 62px; height: 62px; background: var(--surface); box-shadow: inset 0 0 0 1px var(--border), var(--elev-ring); }
+.radii figcaption { font-family: var(--font-mono); font-size: 10.5px; color: var(--meta); margin-top: 7px; }
+.iconwall { display: grid; grid-template-columns: repeat(8, minmax(0, 1fr)); gap: 10px; margin-top: 18px; }
+.iconcell { display: flex; flex-direction: column; align-items: center; gap: 7px; padding: 14px 4px; border: 1px solid var(--border); border-radius: var(--radius-md); background: var(--surface); color: var(--fg-2); }
+.iconcell span { font-family: var(--font-mono); font-size: 9.5px; color: var(--meta); letter-spacing: 0.2px; }
+.tokgrid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; margin-top: 18px; }
+.tokcard { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 20px; }
+.tokcard h4 { font-size: 12px; font-weight: 500; letter-spacing: 0.5px; color: var(--meta); margin-bottom: 14px; text-transform: uppercase; }
+.stackrow { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+.doc-note { font-size: 12px; color: var(--meta); line-height: 1.7; margin-top: 14px; max-width: 76ch; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important; animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important; scroll-behavior: auto !important;
+  }
+}
+</style>
+</head>
+<body>
+
+<!-- ═══ icon sprite · Lucide-style, 24px grid, 1.5px stroke ═══ -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+  <defs>
+    <g id="s" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"></g>
+  </defs>
+  <symbol id="i-mark" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 6.6C10.3 5.3 8 4.6 5.2 4.6c-.7 0-1.2.5-1.2 1.2v11c0 .7.5 1.2 1.2 1.2 2.8 0 5.1.7 6.8 2 1.7-1.3 4-2 6.8-2 .7 0 1.2-.5 1.2-1.2v-11c0-.7-.5-1.2-1.2-1.2-2.8 0-5.1.7-6.8 2Z"/><path d="M12 6.6v13.4"/></symbol>
+  <symbol id="i-search" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m20.5 20.5-4.2-4.2"/></symbol>
+  <symbol id="i-toc" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6h11M9 12h11M9 18h11M4 6h.01M4 12h.01M4 18h.01"/></symbol>
+  <symbol id="i-settings" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12.2 2.6h-.4a1.9 1.9 0 0 0-1.9 1.9v.2a1.9 1.9 0 0 1-.9 1.6l-.4.3a1.9 1.9 0 0 1-1.9 0l-.2-.1a1.9 1.9 0 0 0-2.6.7l-.2.4a1.9 1.9 0 0 0 .7 2.6l.2.1a1.9 1.9 0 0 1 .9 1.6v.5a1.9 1.9 0 0 1-.9 1.6l-.2.1a1.9 1.9 0 0 0-.7 2.6l.2.4a1.9 1.9 0 0 0 2.6.7l.2-.1a1.9 1.9 0 0 1 1.9 0l.4.3a1.9 1.9 0 0 1 .9 1.6v.2a1.9 1.9 0 0 0 1.9 1.9h.4a1.9 1.9 0 0 0 1.9-1.9v-.2a1.9 1.9 0 0 1 .9-1.6l.4-.3a1.9 1.9 0 0 1 1.9 0l.2.1a1.9 1.9 0 0 0 2.6-.7l.2-.4a1.9 1.9 0 0 0-.7-2.6l-.2-.1a1.9 1.9 0 0 1-.9-1.6v-.5a1.9 1.9 0 0 1 .9-1.6l.2-.1a1.9 1.9 0 0 0 .7-2.6l-.2-.4a1.9 1.9 0 0 0-2.6-.7l-.2.1a1.9 1.9 0 0 1-1.9 0l-.4-.3a1.9 1.9 0 0 1-.9-1.6v-.2a1.9 1.9 0 0 0-1.9-1.9Z"/><circle cx="12" cy="12" r="2.8"/></symbol>
+  <symbol id="i-user" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21v-1.8a3.6 3.6 0 0 0-3.6-3.6H8.6A3.6 3.6 0 0 0 5 19.2V21"/><circle cx="12" cy="7.6" r="3.6"/></symbol>
+  <symbol id="i-chev-r" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="m9.5 18 6-6-6-6"/></symbol>
+  <symbol id="i-chev-l" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="m14.5 18-6-6 6-6"/></symbol>
+  <symbol id="i-panel" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3.5" width="18" height="17" rx="2"/><path d="M9.5 3.5v17"/></symbol>
+  <symbol id="i-plus" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M12 5v14"/></symbol>
+  <symbol id="i-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6.5 9.2 17.3 4 12.1"/></symbol>
+  <symbol id="i-copy" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="8.5" y="8.5" width="12" height="12" rx="2"/><path d="M4.8 15.5A2 2 0 0 1 3.5 13.7V5.5a2 2 0 0 1 2-2h8.2a2 2 0 0 1 1.8 1.3"/></symbol>
+  <symbol id="i-bookmark" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="m19 21-7-4.2L5 21V5.5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2Z"/></symbol>
+  <symbol id="i-scroll" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18.5 17V5.6a2.1 2.1 0 0 0-2.1-2.1H5"/><path d="M8.5 20.5h11a2 2 0 0 0 2-2v-.8a1 1 0 0 0-1-1h-9.5a1 1 0 0 0-1 1v.8a2 2 0 1 1-4 0V5.6a2 2 0 1 0-4 0v2.1a1 1 0 0 0 1 1h3"/></symbol>
+  <symbol id="i-book" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 7v13.5"/><path d="M3.5 18.5a1 1 0 0 1-1-1V4.6a1 1 0 0 1 1-1h4.9A3.6 3.6 0 0 1 12 7a3.6 3.6 0 0 1 3.6-3.4h4.9a1 1 0 0 1 1 1v12.9a1 1 0 0 1-1 1h-5.4a3 3 0 0 0-3.1 2.4 3 3 0 0 0-3.1-2.4Z"/></symbol>
+  <symbol id="i-grid" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="3.5" width="7" height="7" rx="1.4"/><rect x="13.5" y="3.5" width="7" height="7" rx="1.4"/><rect x="3.5" y="13.5" width="7" height="7" rx="1.4"/><rect x="13.5" y="13.5" width="7" height="7" rx="1.4"/></symbol>
+  <symbol id="i-layers" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12.6 2.6a1.5 1.5 0 0 0-1.2 0L2.9 6.3a.8.8 0 0 0 0 1.4l8.5 3.7a1.5 1.5 0 0 0 1.2 0l8.5-3.7a.8.8 0 0 0 0-1.4Z"/><path d="m21.1 12.4-8.5 3.7a1.5 1.5 0 0 1-1.2 0l-8.5-3.7"/><path d="m21.1 17.1-8.5 3.7a1.5 1.5 0 0 1-1.2 0l-8.5-3.7"/></symbol>
+  <symbol id="i-clock" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 6.8V12l3.4 2"/></symbol>
+  <symbol id="i-arrow-r" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 12h15M13 5.5l6.5 6.5-6.5 6.5"/></symbol>
+  <symbol id="i-x" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18M6 6l12 12"/></symbol>
+  <symbol id="i-table" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="4" width="17" height="16" rx="2"/><path d="M3.5 9.5h17M3.5 15h17M9.5 9.5V20"/></symbol>
+  <symbol id="i-branch" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6.5 4.5v9"/><circle cx="17.5" cy="6.5" r="2.6"/><circle cx="6.5" cy="17.5" r="2.6"/><path d="M17.5 9.1a7.6 7.6 0 0 1-7.5 7.4"/></symbol>
+  <symbol id="i-quote" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17 6H4.5M20 12H9M20 18H9M4.5 12v6"/></symbol>
+  <symbol id="i-pin" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 17v5"/><path d="M9 3h6l-1 6 3.2 3.2a1 1 0 0 1-.7 1.8H7.5a1 1 0 0 1-.7-1.8L10 9Z"/></symbol>
+  <symbol id="i-split" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 5h4.2l4.1 6.6 4.1 6.6h2.6"/><path d="M19.5 5h-4.2l-2 3.2M8.8 15.6 6.9 18.7H4.5"/></symbol>
+  <symbol id="i-type" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 7.5V5.2h15v2.3M12 5.2V19M9 19h6"/></symbol>
+  <symbol id="i-note" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20.5 15a2 2 0 0 1-2 2H7.5l-4 4V5a2 2 0 0 1 2-2h13a2 2 0 0 1 2 2Z"/></symbol>
+</svg>
+
+<!-- ═══ prototype switcher ═══ -->
+<header class="proto-bar" data-od-id="proto-switcher">
+  <div class="proto-title">巴利三藏阅读器 <span>· 高保真原型</span></div>
+  <div class="proto-tabs" role="tablist" aria-label="切换屏幕">
+    <button class="proto-tab" role="tab" data-screen="s1" aria-selected="true" data-od-id="tab-reading"><span class="tn">01</span>阅读工作台</button>
+    <button class="proto-tab" role="tab" data-screen="s2" aria-selected="false" data-od-id="tab-mobile"><span class="tn">02</span>移动阅读</button>
+    <button class="proto-tab" role="tab" data-screen="s3" aria-selected="false" data-od-id="tab-catalog"><span class="tn">03</span>目录首页</button>
+    <button class="proto-tab" role="tab" data-screen="s4" aria-selected="false" data-od-id="tab-tokens"><span class="tn">04</span>设计规范</button>
+  </div>
+  <div class="proto-note">kami 设计系统 · 羊皮纸 / 墨蓝 / 衬线</div>
+</header>
+
+<main>
+<!-- ══════════════════════════════════════════════════════════════════
+     SCREEN 1 · 阅读工作台 1440×900
+     ══════════════════════════════════════════════════════════════════ -->
+<section class="screen" id="s1" role="tabpanel" aria-label="阅读工作台">
+<div class="stage-wrap"><div class="stage stage-desk stage-s1">
+
+  <header class="appbar" data-od-id="s1-topbar">
+    <div class="brand">
+      <span class="mark"><svg class="ic" aria-hidden="true"><use href="#i-mark"/></svg></span>
+      <span class="nm">巴利三藏阅读器</span>
+    </div>
+    <nav aria-label="面包屑">
+      <ol class="crumbs" data-od-id="s1-breadcrumb">
+        <li>经藏</li><li class="sep">›</li>
+        <li>长部</li><li class="sep">›</li>
+        <li>梵网经</li><li class="sep">›</li>
+        <li class="cur">第一章</li>
+      </ol>
+    </nav>
+    <div class="searchwrap">
+      <div class="search" data-od-id="s1-search">
+        <svg class="ic ic-sm" aria-hidden="true"><use href="#i-search"/></svg>
+        <label class="sr" for="q1">搜索经文、词形、释义</label>
+        <input id="q1" type="search" placeholder="搜索经文、词形、释义…" autocomplete="off">
+        <span class="kbd">⌘K</span>
+      </div>
+    </div>
+    <div class="bar-actions">
+      <button class="iconbtn" title="目录" aria-label="目录" data-od-id="s1-btn-toc"><svg class="ic" aria-hidden="true"><use href="#i-toc"/></svg></button>
+      <button class="iconbtn" title="设置" aria-label="设置" data-od-id="s1-btn-settings"><svg class="ic" aria-hidden="true"><use href="#i-settings"/></svg></button>
+      <button class="avatar" title="陈 · 学习者" aria-label="用户：陈" data-od-id="s1-avatar">陈</button>
+    </div>
+  </header>
+
+  <div class="ws" id="ws1">
+
+    <!-- left column ─────────────────────────────────────────────── -->
+    <aside class="tree" aria-label="三藏目录" data-od-id="s1-catalog">
+      <div class="tree-head tree-full">
+        <span class="eyebrow">三藏 · Tipiṭaka</span>
+        <button class="iconbtn" id="collapseTree" title="收起目录栏" aria-label="收起目录栏" style="width:28px;height:28px">
+          <svg class="ic ic-sm" aria-hidden="true"><use href="#i-panel"/></svg>
+        </button>
+      </div>
+      <div class="trail" id="treeRail" hidden>
+        <button class="iconbtn" id="expandTree" title="展开目录栏" aria-label="展开目录栏"><svg class="ic" aria-hidden="true"><use href="#i-panel"/></svg></button>
+        <button class="iconbtn" title="书签" aria-label="书签"><svg class="ic" aria-hidden="true"><use href="#i-bookmark"/></svg></button>
+        <button class="iconbtn" title="笔记" aria-label="笔记"><svg class="ic" aria-hidden="true"><use href="#i-note"/></svg></button>
+        <button class="iconbtn" title="生词本" aria-label="生词本"><svg class="ic" aria-hidden="true"><use href="#i-layers"/></svg></button>
+      </div>
+      <div class="tree-scroll tree-full" data-od-id="s1-tree">
+        <button class="tnode" aria-expanded="false" data-toggle="t-vinaya">
+          <svg class="ic ic-sm chev" aria-hidden="true"><use href="#i-chev-r"/></svg>
+          <span class="lbl">律藏<span class="sub">Vinaya Piṭaka · 5 部</span></span>
+        </button>
+        <div class="tgroup" id="t-vinaya" hidden>
+          <button class="tnode"><span class="lbl">经分别<span class="sub">Suttavibhaṅga</span></span></button>
+          <button class="tnode"><span class="lbl">大品<span class="sub">Mahāvagga</span></span></button>
+          <button class="tnode"><span class="lbl">附随<span class="sub">Parivāra</span></span></button>
+        </div>
+
+        <button class="tnode" aria-expanded="true" data-toggle="t-sutta">
+          <svg class="ic ic-sm chev" aria-hidden="true"><use href="#i-chev-r"/></svg>
+          <span class="lbl">经藏<span class="sub">Sutta Piṭaka · 5 尼柯耶</span></span>
+        </button>
+        <div class="tgroup" id="t-sutta">
+          <button class="tnode" aria-expanded="true" data-toggle="t-digha">
+            <svg class="ic ic-sm chev" aria-hidden="true"><use href="#i-chev-r"/></svg>
+            <span class="lbl">长部<span class="sub">Dīgha Nikāya · 34 经</span></span>
+          </button>
+          <div class="tgroup" id="t-digha">
+            <button class="tnode is-cur" aria-current="true" data-od-id="s1-tree-current">
+              <span class="lbl">梵网经<span class="sub">Brahmajālasutta · DN 1</span></span>
+            </button>
+            <button class="tnode"><span class="lbl">沙门果经<span class="sub">Sāmaññaphalasutta · DN 2</span></span></button>
+            <button class="tnode"><span class="lbl">大般涅槃经<span class="sub">Mahāparinibbāna · DN 16</span></span></button>
+          </div>
+          <button class="tnode" aria-expanded="false" data-toggle="t-majjhima">
+            <svg class="ic ic-sm chev" aria-hidden="true"><use href="#i-chev-r"/></svg>
+            <span class="lbl">中部<span class="sub">Majjhima Nikāya · 152 经</span></span>
+          </button>
+          <div class="tgroup" id="t-majjhima" hidden>
+            <button class="tnode"><span class="lbl">根本五十经</span></button>
+          </div>
+          <button class="tnode"><span class="lbl">相应部<span class="sub">Saṃyutta Nikāya</span></span></button>
+        </div>
+
+        <button class="tnode" aria-expanded="false" data-toggle="t-abhi">
+          <svg class="ic ic-sm chev" aria-hidden="true"><use href="#i-chev-r"/></svg>
+          <span class="lbl">论藏<span class="sub">Abhidhamma Piṭaka · 7 部</span></span>
+        </button>
+        <div class="tgroup" id="t-abhi" hidden>
+          <button class="tnode"><span class="lbl">法聚论<span class="sub">Dhammasaṅgaṇī</span></span></button>
+          <button class="tnode"><span class="lbl">分别论<span class="sub">Vibhaṅga</span></span></button>
+          <button class="tnode"><span class="lbl">发趣论<span class="sub">Paṭṭhāna</span></span></button>
+        </div>
+        <button class="tnode" aria-expanded="false" data-toggle="t-extra">
+          <svg class="ic ic-sm chev" aria-hidden="true"><use href="#i-chev-r"/></svg>
+          <span class="lbl">藏外<span class="sub">Pakiṇṇaka</span></span>
+        </button>
+        <div class="tgroup" id="t-extra" hidden>
+          <button class="tnode"><span class="lbl">弥兰王问经<span class="sub">Milindapañha</span></span></button>
+          <button class="tnode"><span class="lbl">清净道论<span class="sub">Visuddhimagga</span></span></button>
+        </div>
+      </div>
+      <div class="progress tree-full" data-od-id="s1-progress">
+        <svg class="ring" viewBox="0 0 38 38" role="img" aria-label="阅读进度 42%">
+          <circle class="t" cx="19" cy="19" r="15"/>
+          <circle class="v" cx="19" cy="19" r="15" stroke-dasharray="39.6 94.2"/>
+        </svg>
+        <div>
+          <div class="pn">42%</div>
+          <div class="pl">阅读进度 · 梵网经</div>
+        </div>
+      </div>
+    </aside>
+
+    <!-- centre column ───────────────────────────────────────────── -->
+    <div class="reader" data-od-id="s1-reader">
+      <div class="measure">
+
+        <article class="pcard" data-od-id="s1-para-1">
+          <span class="pnum" aria-hidden="true">§1</span>
+          <h2 class="sr">第一段</h2>
+          <p class="pali pi" lang="pi"><button class="w" data-w="evam">Evaṃ</button> me <button class="w" data-w="suta">sutaṃ</button>— ekaṃ samayaṃ <button class="w" data-w="bhagavant">bhagavā</button> antarā ca <button class="w" data-w="rajagaha">rājagahaṃ</button> antarā ca <button class="w" data-w="nalanda">nāḷandaṃ</button> <span class="cmp is-sel" data-cmp="addhanamagga"><button class="w" data-w="addhana">addhāna</button><span class="plus">+</span><button class="w" data-w="magga">magga</button><span class="plus">+</span><button class="w" data-w="patipanna">paṭipanno</button></span><span class="splitmark" title="复合词已拆解">拆</span> hoti mahatā <button class="w" data-w="bhikkhusangha">bhikkhusaṅghena</button> saddhiṃ pañcamattehi bhikkhusatehi.</p>
+
+          <div class="glosswrap">
+            <span class="plabel">释</span>
+            <span class="glosses">
+              <span class="gchip"><i>evaṃ</i> 如是</span>
+              <span class="gchip"><i>sutaṃ</i> 所闻</span>
+            </span>
+          </div>
+
+          <div class="line">
+            <span class="plabel q">参</span>
+            <span class="txt">如是我闻：一时，世尊正行于王舍城与那烂陀之间的大道上，与大比丘众五百人俱。<span class="src">ePitaka 中译</span></span>
+          </div>
+
+          <div class="minewrap">
+            <label class="sr" for="tr1">第一段我的翻译</label>
+            <textarea class="mine" id="tr1" rows="2" placeholder="在此填写你的翻译…" data-translation></textarea>
+            <span class="save-state" data-save-for="tr1"><svg class="ic ic-sm" aria-hidden="true"><use href="#i-clock"/></svg>未保存</span>
+          </div>
+
+          <div class="annot">
+            <span class="av" aria-hidden="true">陈</span>
+            <div>
+              <div class="who">陈 · 今天 14:32</div>
+              <div class="body">注意 <span class="pi">antarā ca … antarā ca</span> 这一对：不是「在两者之间」，而是「从…到…之间」的行程表达。</div>
+            </div>
+          </div>
+        </article>
+
+        <article class="pcard" data-od-id="s1-para-2">
+          <span class="pnum" aria-hidden="true">§2</span>
+          <h2 class="sr">第二段</h2>
+          <p class="pali pi" lang="pi"><button class="w" data-w="paribbajaka">Suppiyopi</button> kho <button class="w" data-w="paribbajaka">paribbājako</button> antarā ca rājagahaṃ antarā ca nāḷandaṃ addhānamaggappaṭipanno hoti saddhiṃ antevāsinā brahmadattena māṇavena.</p>
+
+          <div class="glosswrap">
+            <span class="plabel">释</span>
+            <span class="glosses"><span class="gchip"><i>paribbājako</i> 游行者</span></span>
+          </div>
+
+          <div class="line">
+            <span class="plabel q">参</span>
+            <span class="txt">游行者须卑亦行于王舍城与那烂陀之间的大道上，与弟子青年梵摩达多同行。<span class="src">ePitaka 中译</span></span>
+          </div>
+
+          <div class="minewrap">
+            <label class="sr" for="tr2">第二段我的翻译</label>
+            <textarea class="mine" id="tr2" rows="2" placeholder="在此填写你的翻译…" data-translation>游行者须卑也走在这条路上，带着他的学生梵摩达多。</textarea>
+            <span class="save-state" data-save-for="tr2"><svg class="ic ic-sm" aria-hidden="true"><use href="#i-check"/></svg>已保存 · 14:36</span>
+          </div>
+
+          <div class="annot">
+            <button class="ghostlink" data-annotate><svg class="ic ic-sm" aria-hidden="true"><use href="#i-plus"/></svg>批注</button>
+          </div>
+        </article>
+
+        <article class="pcard" data-od-id="s1-para-3">
+          <span class="pnum" aria-hidden="true">§3</span>
+          <h2 class="sr">第三段</h2>
+          <p class="pali pi" lang="pi">Tatra sudaṃ suppiyo paribbājako anekapariyāyena <button class="w" data-w="buddha">buddhassa</button> avaṇṇaṃ bhāsati, <button class="w" data-w="dhamma">dhammassa</button> avaṇṇaṃ bhāsati, <button class="w" data-w="sangha">saṅghassa</button> avaṇṇaṃ bhāsati; suppiyassa pana paribbājakassa antevāsī brahmadatto māṇavo anekapariyāyena buddhassa vaṇṇaṃ bhāsati, dhammassa vaṇṇaṃ bhāsati, saṅghassa vaṇṇaṃ bhāsati.</p>
+
+          <div class="glosswrap">
+            <span class="plabel">释</span>
+            <span class="glosses">
+              <span class="gchip"><i>avaṇṇaṃ</i> 毁谤</span>
+              <span class="gchip"><i>vaṇṇaṃ</i> 称赞</span>
+            </span>
+          </div>
+
+          <div class="line">
+            <span class="plabel q">参</span>
+            <span class="txt">在那里，游行者须卑以种种方式毁谤佛、毁谤法、毁谤僧；而游行者须卑的弟子青年梵摩达多，则以种种方式称赞佛、称赞法、称赞僧。<span class="src">ePitaka 中译</span></span>
+          </div>
+
+          <div class="minewrap">
+            <label class="sr" for="tr3">第三段我的翻译</label>
+            <textarea class="mine" id="tr3" rows="2" placeholder="在此填写你的翻译…" data-translation></textarea>
+            <span class="save-state" data-save-for="tr3"><svg class="ic ic-sm" aria-hidden="true"><use href="#i-clock"/></svg>未保存</span>
+          </div>
+
+          <div class="annot">
+            <button class="ghostlink" data-annotate><svg class="ic ic-sm" aria-hidden="true"><use href="#i-plus"/></svg>批注</button>
+          </div>
+        </article>
+
+        <article class="pcard" data-od-id="s1-para-4">
+          <span class="pnum" aria-hidden="true">§4</span>
+          <h2 class="sr">第四段</h2>
+          <p class="pali pi" lang="pi">Itiha te ubho ācariyantevāsī aññamaññassa ujuvipaccanīkavādā <button class="w" data-w="bhagavant">bhagavantaṃ</button> piṭṭhito piṭṭhito anubandhā honti <button class="w" data-w="bhikkhusangha">bhikkhusaṅghañca</button>.</p>
+
+          <div class="glosswrap">
+            <span class="plabel">释</span>
+            <span class="glosses"><span class="gchip"><i>piṭṭhito piṭṭhito</i> 紧跟随行</span></span>
+          </div>
+
+          <div class="line">
+            <span class="plabel q">参</span>
+            <span class="txt">这样，师徒二人彼此所说正好相反，却紧跟在世尊与比丘僧团之后。<span class="src">ePitaka 中译</span></span>
+          </div>
+
+          <div class="minewrap">
+            <label class="sr" for="tr4">第四段我的翻译</label>
+            <textarea class="mine" id="tr4" rows="2" placeholder="在此填写你的翻译…" data-translation></textarea>
+            <span class="save-state" data-save-for="tr4"><svg class="ic ic-sm" aria-hidden="true"><use href="#i-clock"/></svg>未保存</span>
+          </div>
+
+          <div class="annot">
+            <span class="av" aria-hidden="true">陈</span>
+            <div>
+              <div class="who">陈 · 昨天 21:08</div>
+              <div class="body"><span class="pi">ujuvipaccanīkavādā</span> 是 <span class="pi">uju + vipaccanīka + vāda</span>：直说与相反说，即「针锋相对」。</div>
+            </div>
+          </div>
+        </article>
+
+        <article class="pcard" data-od-id="s1-para-5">
+          <span class="pnum" aria-hidden="true">§5</span>
+          <h2 class="sr">第五段</h2>
+          <p class="pali pi" lang="pi">Atha kho <button class="w" data-w="bhagavant">bhagavā</button> ambalaṭṭhikāyaṃ rājāgārake ekarattivāsaṃ upagacchi saddhiṃ bhikkhusaṅghena.</p>
+
+          <div class="glosswrap">
+            <span class="plabel">释</span>
+            <span class="glosses"><span class="gchip"><i>ekarattivāsaṃ upagacchi</i> 住一夜</span></span>
+          </div>
+
+          <div class="line">
+            <span class="plabel q">参</span>
+            <span class="txt">于是，世尊与比丘僧团一同到庵婆罗提迦的王家园林中过一夜。<span class="src">ePitaka 中译</span></span>
+          </div>
+
+          <div class="minewrap">
+            <label class="sr" for="tr5">第五段我的翻译</label>
+            <textarea class="mine" id="tr5" rows="2" placeholder="在此填写你的翻译…" data-translation></textarea>
+            <span class="save-state" data-save-for="tr5"><svg class="ic ic-sm" aria-hidden="true"><use href="#i-clock"/></svg>未保存</span>
+          </div>
+
+          <div class="annot">
+            <button class="ghostlink" data-annotate><svg class="ic ic-sm" aria-hidden="true"><use href="#i-plus"/></svg>批注</button>
+          </div>
+        </article>
+
+      </div>
+    </div>
+
+    <!-- right rail ──────────────────────────────────────────────── -->
+    <aside class="rail" aria-label="本经标题目录与词汇" data-od-id="s1-toc">
+      <section class="railsec">
+        <div class="railhead"><span class="eyebrow">标题目录</span><span class="secmeta num">DN 1</span></div>
+        <div class="vocab" role="list">
+          <button class="toc-item is-active" role="listitem"><span class="tn">§1</span>一、游行者之论</button>
+          <button class="toc-item" role="listitem"><span class="tn">§7</span>二、戒</button>
+          <button class="toc-item" role="listitem"><span class="tn">§7.1</span>2.1 小戒</button>
+          <button class="toc-item" role="listitem"><span class="tn">§11</span>2.2 中戒</button>
+          <button class="toc-item" role="listitem"><span class="tn">§21</span>2.3 大戒</button>
+          <button class="toc-item" role="listitem"><span class="tn">§28</span>三、见</button>
+          <button class="toc-item" role="listitem"><span class="tn">§28.2</span>3.1 前际论者</button>
+          <button class="toc-item" role="listitem"><span class="tn">§30</span>3.1.1 常见论</button>
+          <button class="toc-item" role="listitem"><span class="tn">§2.16</span>3.1.3 有边无边论</button>
+        </div>
+      </section>
+      <section class="railsec" data-od-id="s1-vocab">
+        <div class="railhead"><span class="eyebrow">本页词汇</span><span class="secmeta num">8</span></div>
+        <div class="vocab">
+          <button class="vitem" data-jump="addhanamagga"><span class="vw pi">addhānamaggappaṭipanno</span><span class="vt">adj</span></button>
+          <button class="vitem" data-jump="evam"><span class="vw pi">evaṃ</span><span class="vt">ind</span></button>
+          <button class="vitem" data-jump="suta"><span class="vw pi">sutaṃ</span><span class="vt">pp</span></button>
+          <button class="vitem" data-jump="bhagavant"><span class="vw pi">bhagavā</span><span class="vt">masc</span></button>
+          <button class="vitem" data-jump="paribbajaka"><span class="vw pi">paribbājako</span><span class="vt">masc</span></button>
+          <button class="vitem" data-jump="nalanda"><span class="vw pi">nāḷandaṃ</span><span class="vt">fem</span></button>
+          <button class="vitem" data-jump="rajagaha"><span class="vw pi">rājagahaṃ</span><span class="vt">nt</span></button>
+          <button class="vitem" data-jump="bhikkhusangha"><span class="vw pi">bhikkhusaṅghena</span><span class="vt">masc</span></button>
+        </div>
+      </section>
+    </aside>
+
+    <!-- docked word lookup panel ────────────────────────────────── -->
+    <aside class="lookup" aria-label="查词面板" data-od-id="s1-lookup">
+      <div class="panel">
+        <div class="panel-head">
+          <div class="row1">
+            <span class="eyebrow">查词</span>
+            <span style="display:flex;gap:2px">
+              <button class="iconbtn" style="width:28px;height:28px" title="固定词条" aria-label="固定词条" data-od-id="s1-pin"><svg class="ic ic-sm" aria-hidden="true"><use href="#i-pin"/></svg></button>
+              <button class="iconbtn" style="width:28px;height:28px" title="关闭" aria-label="关闭查词面板"><svg class="ic ic-sm" aria-hidden="true"><use href="#i-x"/></svg></button>
+            </span>
+          </div>
+          <div class="recent" data-od-id="s1-recent">
+            <span class="eyebrow" style="letter-spacing:.6px">最近</span>
+            <button class="rchip" data-jump="addhanamagga" title="正文中当前选中的词"><span class="dot"></span>addhānamaggappaṭipanno<span class="tagmark">正文</span></button>
+            <button class="rchip" data-jump="dhammacakka">dhammacakkaṃ</button>
+            <button class="rchip" data-jump="sammasambuddha">sammāsambuddho</button>
+          </div>
+          <div data-headblock></div>
+        </div>
+        <div class="tabs" role="tablist" aria-label="词条分区">
+          <button class="tab" role="tab" data-tab="meaning" aria-selected="true">释义</button>
+          <button class="tab" role="tab" data-tab="grammar" aria-selected="false">语法</button>
+          <button class="tab" role="tab" data-tab="decl" aria-selected="false">变格</button>
+          <button class="tab" role="tab" data-tab="family" aria-selected="false">词族</button>
+        </div>
+        <div class="panel-body" data-body></div>
+        <div class="panel-foot">
+          <button class="btn btn-primary" data-apply>应用为选词</button>
+          <span class="spacer"></span>
+          <button class="btn btn-quiet" data-copy><svg class="ic ic-sm" aria-hidden="true"><use href="#i-copy"/></svg>复制</button>
+          <button class="btn btn-ghost" data-wordbook><svg class="ic ic-sm" aria-hidden="true"><use href="#i-bookmark"/></svg>生词本</button>
+        </div>
+      </div>
+    </aside>
+
+  </div>
+</div></div>
+</section>
+
+<!-- ══════════════════════════════════════════════════════════════════
+     SCREEN 2 · 移动阅读 390×844
+     ══════════════════════════════════════════════════════════════════ -->
+<section class="screen" id="s2" role="tabpanel" aria-label="移动阅读" hidden>
+<div class="stage-wrap"><div class="stage stage-phone">
+  <div class="phone">
+
+    <header class="mbar" data-od-id="s2-topbar">
+      <button class="tap" aria-label="返回目录"><svg class="ic" aria-hidden="true"><use href="#i-chev-l"/></svg></button>
+      <div class="title">梵网经<span>长部 · DN 1 · 第一章</span></div>
+      <button class="tap" aria-label="目录"><svg class="ic" aria-hidden="true"><use href="#i-toc"/></svg></button>
+    </header>
+
+    <div class="mreader" data-od-id="s2-reader">
+      <article class="mcard">
+        <span class="pnum" aria-hidden="true">§1</span>
+        <p class="mpali pi" lang="pi"><button class="w" data-w="evam">Evaṃ</button> me <button class="w" data-w="suta">sutaṃ</button>— ekaṃ samayaṃ <button class="w" data-w="bhagavant">bhagavā</button> antarā ca <button class="w" data-w="rajagaha">rājagahaṃ</button> antarā ca <button class="w" data-w="nalanda">nāḷandaṃ</button> <span class="cmp is-sel"><button class="w" data-w="addhana">addhāna</button><span class="plus">+</span><button class="w" data-w="magga">magga</button><span class="plus">+</span><button class="w" data-w="patipanna">paṭipanno</button></span><span class="splitmark">拆</span> hoti mahatā <button class="w" data-w="bhikkhusangha">bhikkhusaṅghena</button> saddhiṃ pañcamattehi bhikkhusatehi.</p>
+        <div class="mgloss">
+          <span class="plabel">释</span>
+          <span class="glosses"><span class="gchip"><i>evaṃ</i> 如是</span><span class="gchip"><i>sutaṃ</i> 所闻</span></span>
+        </div>
+        <p class="msmall">如是我闻：一时，世尊正行于王舍城与那烂陀之间的大道上，与大比丘众五百人俱。<span class="src" style="font-size:11px;color:var(--meta)">ePitaka 中译</span></p>
+        <p class="msmall" style="color:var(--fg-2)"><span class="plabel q" style="margin-right:6px">批</span>陈 · 今天 14:32 — <span class="pi">antarā ca … antarā ca</span> 表行程区间。</p>
+      </article>
+      <article class="mcard">
+        <span class="pnum" aria-hidden="true">§2</span>
+        <p class="mpali pi" lang="pi">Suppiyopi kho paribbājako antarā ca rājagahaṃ antarā ca nāḷandaṃ addhānamaggappaṭipanno hoti saddhiṃ antevāsinā brahmadattena māṇavena.</p>
+        <div class="mgloss">
+          <span class="plabel">释</span>
+          <span class="glosses"><span class="gchip"><i>paribbājako</i> 游行者</span></span>
+        </div>
+        <p class="msmall">游行者须卑亦行于王舍城与那烂陀之间的大道上，与弟子青年梵摩达多同行。</p>
+      </article>
+    </div>
+
+    <div class="scrim" aria-hidden="true"></div>
+
+    <div class="sheet" role="dialog" aria-modal="true" aria-label="查词：dhammacakkaṃ" data-od-id="s2-sheet">
+      <div class="grip" aria-hidden="true"><i></i></div>
+      <div class="sheet-head">
+        <div style="display:flex;align-items:center;justify-content:space-between">
+          <span class="eyebrow">查词</span>
+          <span class="secmeta num">长按可拖动</span>
+        </div>
+        <div data-headblock></div>
+      </div>
+      <div class="tabs" role="tablist" aria-label="词条分区">
+        <button class="tab" role="tab" data-tab="meaning" aria-selected="true">释义</button>
+        <button class="tab" role="tab" data-tab="grammar" aria-selected="false">语法</button>
+        <button class="tab" role="tab" data-tab="decl" aria-selected="false">变格</button>
+        <button class="tab" role="tab" data-tab="family" aria-selected="false">词族</button>
+      </div>
+      <div class="sheet-body" data-body></div>
+      <div class="sheet-foot">
+        <button class="btn btn-quiet" data-wordbook style="flex:none"><svg class="ic" aria-hidden="true"><use href="#i-bookmark"/></svg></button>
+        <button class="btn btn-primary" data-apply>应用选词</button>
+      </div>
+      <div class="home-ind" aria-hidden="true"><i></i></div>
+    </div>
+
+  </div>
+</div></div>
+</section>
+
+<!-- ══════════════════════════════════════════════════════════════════
+     SCREEN 3 · 目录首页
+     ══════════════════════════════════════════════════════════════════ -->
+<section class="screen" id="s3" role="tabpanel" aria-label="目录首页" hidden>
+<div class="stage-wrap"><div class="stage stage-desk page">
+
+  <header class="appbar" data-od-id="s3-topbar">
+    <div class="brand">
+      <span class="mark"><svg class="ic" aria-hidden="true"><use href="#i-mark"/></svg></span>
+      <span class="nm">巴利三藏阅读器</span>
+    </div>
+    <div class="searchwrap" style="justify-content:flex-start">
+      <div class="search" data-od-id="s3-search">
+        <svg class="ic ic-sm" aria-hidden="true"><use href="#i-search"/></svg>
+        <label class="sr" for="q3">搜索经文、词形、释义</label>
+        <input id="q3" type="search" placeholder="搜索经文、词形、释义…" autocomplete="off">
+        <span class="kbd">⌘K</span>
+      </div>
+    </div>
+    <div class="bar-actions">
+      <button class="iconbtn" title="书签" aria-label="书签"><svg class="ic" aria-hidden="true"><use href="#i-bookmark"/></svg></button>
+      <button class="iconbtn" title="设置" aria-label="设置"><svg class="ic" aria-hidden="true"><use href="#i-settings"/></svg></button>
+      <button class="avatar" title="陈 · 学习者" aria-label="用户：陈">陈</button>
+    </div>
+  </header>
+
+  <div class="shell">
+    <header data-od-id="s3-hero">
+      <span class="eyebrow hero-eyebrow">Tipiṭaka · 三藏</span>
+      <h1 class="hero">巴利三藏阅读器</h1>
+      <p class="lede">为大量阅读原典而设计：以巴利原文为主体，逐词可查、可拆解复合词、可对照中译，并在同一处留下自己的译文与批注。读得多，词与语法自然长在身上。</p>
+      <div class="metrics" data-od-id="s3-metrics">
+        <div class="metric">
+          <div class="mv num">179<span class="mu">部</span></div>
+          <div class="ml">已收录典籍</div>
+        </div>
+        <div class="metric">
+          <div class="mv num">103,955<span class="mu">段</span></div>
+          <div class="ml">已切分段落</div>
+        </div>
+        <div class="metric">
+          <div class="mv num">89,114<span class="mu">条</span></div>
+          <div class="ml">词条与词形</div>
+        </div>
+      </div>
+    </header>
+
+    <section class="block" data-od-id="s3-resume">
+      <div class="section-head">
+        <span class="section-num">01</span>
+        <h2 class="section-title">继续阅读</h2>
+      </div>
+      <div class="resume">
+        <svg class="ring" viewBox="0 0 38 38" style="width:46px;height:46px" role="img" aria-label="本书进度 42%">
+          <circle class="t" cx="19" cy="19" r="15"/>
+          <circle class="v" cx="19" cy="19" r="15" stroke-dasharray="39.6 94.2"/>
+        </svg>
+        <div class="rinfo">
+          <div class="rbook">梵网经 · Brahmajālasutta</div>
+          <div class="rmeta">长部第 1 经 · DN 1 · 第一章 游行者之论 · 进度 42%</div>
+          <p class="rpassage pi" lang="pi">Evaṃ me sutaṃ— ekaṃ samayaṃ bhagavā antarā ca rājagahaṃ antarā ca nāḷandaṃ addhānamaggappaṭipanno hoti…</p>
+        </div>
+        <button class="btn btn-primary" data-od-id="s3-resume-cta">继续</button>
+      </div>
+    </section>
+
+    <section class="block" data-od-id="s3-baskets">
+      <div class="section-head">
+        <span class="section-num">02</span>
+        <h2 class="section-title">三藏</h2>
+      </div>
+      <div class="grid3">
+
+        <article class="basket" data-od-id="basket-vinaya">
+          <div class="bhead">
+            <svg class="ic ic-lg bicon" aria-hidden="true"><use href="#i-scroll"/></svg>
+            <div>
+              <h3 class="btitle">律藏</h3>
+              <div class="bsub">Vinaya Piṭaka</div>
+              <div class="bcount">5 部 · 经分别、大品、小品、附随</div>
+            </div>
+          </div>
+          <div class="brows">
+            <button class="brow"><span class="bn">经分别<i>Suttavibhaṅga</i></span><svg class="ic ic-sm" aria-hidden="true"><use href="#i-chev-r"/></svg></button>
+            <button class="brow"><span class="bn">大品<i>Mahāvagga</i></span><svg class="ic ic-sm" aria-hidden="true"><use href="#i-chev-r"/></svg></button>
+            <button class="brow"><span class="bn">附随<i>Parivāra</i></span><svg class="ic ic-sm" aria-hidden="true"><use href="#i-chev-r"/></svg></button>
+          </div>
+        </article>
+
+        <article class="basket" data-od-id="basket-sutta">
+          <div class="bhead">
+            <svg class="ic ic-lg bicon" aria-hidden="true"><use href="#i-book"/></svg>
+            <div>
+              <h3 class="btitle">经藏</h3>
+              <div class="bsub">Sutta Piṭaka</div>
+              <div class="bcount">5 尼柯耶 · 长、中、相应、增支、小部</div>
+            </div>
+          </div>
+          <div class="brows">
+            <button class="brow"><span class="bn">长部<i>Dīgha Nikāya · 34 经</i></span><svg class="ic ic-sm" aria-hidden="true"><use href="#i-chev-r"/></svg></button>
+            <button class="brow"><span class="bn">中部<i>Majjhima Nikāya · 152 经</i></span><svg class="ic ic-sm" aria-hidden="true"><use href="#i-chev-r"/></svg></button>
+            <button class="brow"><span class="bn">相应部<i>Saṃyutta Nikāya</i></span><svg class="ic ic-sm" aria-hidden="true"><use href="#i-chev-r"/></svg></button>
+          </div>
+        </article>
+
+        <article class="basket" data-od-id="basket-abhidhamma">
+          <div class="bhead">
+            <svg class="ic ic-lg bicon" aria-hidden="true"><use href="#i-grid"/></svg>
+            <div>
+              <h3 class="btitle">论藏</h3>
+              <div class="bsub">Abhidhamma Piṭaka</div>
+              <div class="bcount">7 部 · 法聚、分别、发趣</div>
+            </div>
+          </div>
+          <div class="brows">
+            <button class="brow"><span class="bn">法聚论<i>Dhammasaṅgaṇī</i></span><svg class="ic ic-sm" aria-hidden="true"><use href="#i-chev-r"/></svg></button>
+            <button class="brow"><span class="bn">分别论<i>Vibhaṅga</i></span><svg class="ic ic-sm" aria-hidden="true"><use href="#i-chev-r"/></svg></button>
+            <button class="brow"><span class="bn">发趣论<i>Paṭṭhāna</i></span><svg class="ic ic-sm" aria-hidden="true"><use href="#i-chev-r"/></svg></button>
+          </div>
+        </article>
+
+      </div>
+    </section>
+
+    <section class="block" data-od-id="s3-recent-vocab">
+      <div class="section-head">
+        <span class="section-num">03</span>
+        <h2 class="section-title">最近查阅的词汇</h2>
+      </div>
+      <div class="chipstrip">
+        <button class="wchip" data-jump="dhammacakka"><span class="cw pi">dhammacakkaṃ</span><span class="ct">nt</span></button>
+        <button class="wchip" data-jump="addhanamagga"><span class="cw pi">addhānamaggappaṭipanno</span><span class="ct">adj</span></button>
+        <button class="wchip" data-jump="sammasambuddha"><span class="cw pi">sammāsambuddho</span><span class="ct">masc</span></button>
+        <button class="wchip" data-jump="bhagavant"><span class="cw pi">bhagavā</span><span class="ct">masc</span></button>
+        <button class="wchip" data-jump="paribbajaka"><span class="cw pi">paribbājako</span><span class="ct">masc</span></button>
+        <button class="wchip" data-jump="magga"><span class="cw pi">maggo</span><span class="ct">masc</span></button>
+        <button class="wchip" data-jump="cakka"><span class="cw pi">cakkaṃ</span><span class="ct">nt</span></button>
+        <button class="wchip" data-jump="suta"><span class="cw pi">sutaṃ</span><span class="ct">pp</span></button>
+      </div>
+    </section>
+
+    <footer class="foot" data-od-id="s3-footer">
+      <div class="fgrid">
+        <div class="fmark"><svg class="ic ic-sm" aria-hidden="true"><use href="#i-mark"/></svg>巴利三藏阅读器</div>
+        <p>巴利原文：Mahāsaṅgīti Tipiṭaka（分段依 SuttaCentral）<br>词典数据：DPD · Digital Pāḷi Dictionary；语法与变格表据 DPD 词条整理</p>
+        <p>界面语言：简体中文 · 原型演示，阅读进度与批注为示例数据</p>
+      </div>
+    </footer>
+
+  </div>
+</div></div>
+</section>
+
+<!-- ══════════════════════════════════════════════════════════════════
+     SCREEN 4 · 设计规范
+     ══════════════════════════════════════════════════════════════════ -->
+<section class="screen" id="s4" role="tabpanel" aria-label="设计规范" hidden>
+<div class="stage-wrap"><div class="stage stage-desk page">
+  <div class="shell" style="padding-top:48px">
+
+    <header data-od-id="s4-hero">
+      <span class="eyebrow hero-eyebrow">Design System · kami 紙 / 纸</span>
+      <h1 class="hero" style="font-size:46px">设计规范</h1>
+      <p class="lede" style="max-width:74ch">羊皮纸底、单一墨蓝强调色、衬线承担全部层级、字重仅 400/500、无斜体、无硬投影。以下为本原型实际使用的全部令牌与组件状态，中文正文使用宋体族，巴利原文使用 Charter / Georgia。</p>
+    </header>
+
+    <section class="block" data-od-id="s4-colors">
+      <div class="section-head"><span class="section-num">01</span><h2 class="section-title">颜色</h2></div>
+      <div class="swatches">
+        <div class="swatch"><div class="box" style="background:var(--bg)"></div><div class="hex">#F5F4ED</div><div class="role">页面底色 · 羊皮纸</div><div class="tok">--bg</div></div>
+        <div class="swatch"><div class="box" style="background:var(--surface)"></div><div class="hex">#FAF9F5</div><div class="role">卡片 · 象牙白</div><div class="tok">--surface</div></div>
+        <div class="swatch"><div class="box" style="background:var(--surface-warm)"></div><div class="hex">#E8E6DC</div><div class="role">次级面 · 暖沙</div><div class="tok">--surface-warm</div></div>
+        <div class="swatch"><div class="box" style="background:var(--accent)"></div><div class="hex">#1B365D</div><div class="role">强调 · 墨蓝（≤5% 面积）</div><div class="tok">--accent</div></div>
+        <div class="swatch"><div class="box" style="background:var(--fg)"></div><div class="hex">#141413</div><div class="role">主文字 · 近黑</div><div class="tok">--fg</div></div>
+        <div class="swatch"><div class="box" style="background:var(--fg-2)"></div><div class="hex">#3D3D3A</div><div class="role">次级文字 · 暖深灰</div><div class="tok">--fg-2</div></div>
+        <div class="swatch"><div class="box" style="background:var(--muted)"></div><div class="hex">#504E49</div><div class="role">弱文字 · 橄榄</div><div class="tok">--muted</div></div>
+        <div class="swatch"><div class="box" style="background:var(--meta)"></div><div class="hex">#6B6A64</div><div class="role">元信息 · 石</div><div class="tok">--meta</div></div>
+        <div class="swatch"><div class="box" style="background:var(--border)"></div><div class="hex">#E8E6DC</div><div class="role">边框 · 分隔线</div><div class="tok">--border</div></div>
+        <div class="swatch"><div class="box" style="background:var(--border-soft)"></div><div class="hex">#E5E3D8</div><div class="role">细分隔线</div><div class="tok">--border-soft</div></div>
+        <div class="swatch"><div class="box" style="background:var(--tag-bg-faint)"></div><div class="hex">#EEF2F7</div><div class="role">标签淡底（实色，非 rgba）</div><div class="tok">--tag-bg-faint</div></div>
+        <div class="swatch"><div class="box" style="background:var(--tag-bg-soft)"></div><div class="hex">#E4ECF5</div><div class="role">标签默认 / 选词底</div><div class="tok">--tag-bg-soft</div></div>
+        <div class="swatch"><div class="box" style="background:var(--tag-bg-base)"></div><div class="hex">#D6E1EE</div><div class="role">标签浓底 / 拆解标记</div><div class="tok">--tag-bg-base</div></div>
+        <div class="swatch"><div class="box" style="background:var(--tag-bg-strong)"></div><div class="hex">#D0DCE9</div><div class="role">标签最浓底</div><div class="tok">--tag-bg-strong</div></div>
+        <div class="swatch"><div class="box" style="background:#30302e"></div><div class="hex">#30302E</div><div class="role">深色容器 · 暖炭</div><div class="tok">DESIGN.md §2 · 未绑定令牌</div></div>
+        <div class="swatch"><div class="box" style="background:var(--success)"></div><div class="hex">#4A6B3A</div><div class="role">成功（极少使用）</div><div class="tok">--success</div></div>
+      </div>
+
+      <div class="tokgrid">
+        <div class="tokcard">
+          <h4>用色纪律</h4>
+          <div class="stackrow" style="gap:8px">
+            <span class="chip">nt</span><span class="chip">复合词</span><span class="chip">sandhi</span>
+            <span class="chip plain">adj</span><span class="chip plain">masc</span>
+          </div>
+          <p class="doc-note">墨蓝只出现在：段落号、当前目录项左规线、标签页下划线、被选词文字、单一主按钮。其余中性色一律带黄棕底调（R ≈ G &gt; B），不使用冷灰。</p>
+        </div>
+        <div class="tokcard">
+          <h4>对比度</h4>
+          <p class="doc-note" style="margin-top:0">
+            正文 <span class="num">#141413</span> / <span class="num">#F5F4ED</span> = <span class="num">15.9:1</span>（AAA）<br>
+            弱文字 <span class="num">#504E49</span> / <span class="num">#FAF9F5</span> = <span class="num">8.0:1</span>（AAA）<br>
+            元信息 <span class="num">#6B6A64</span> / <span class="num">#FAF9F5</span> = <span class="num">5.4:1</span>（AA）<br>
+            选词文字 <span class="num">#1B365D</span> / <span class="num">#E4ECF5</span> = <span class="num">9.1:1</span>（AAA）
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <section class="block" data-od-id="s4-type">
+      <div class="section-head"><span class="section-num">02</span><h2 class="section-title">字号与字重</h2></div>
+      <div style="margin-top:14px">
+        <div class="spec"><span class="si">58 / 500 / 1.22</span><span class="sd" style="font-size:58px;font-weight:500;line-height:1.22">巴利三藏阅读器</span><span class="sn">Hero</span></div>
+        <div class="spec"><span class="si">32 / 500 / 1.25</span><span class="sd" style="font-size:32px;font-weight:500;line-height:1.25">标题目录 · 章节标题</span><span class="sn">Section</span></div>
+        <div class="spec"><span class="si">26 / 500 / 1.30</span><span class="sd" style="font-size:26px;font-weight:500;line-height:1.3">继续阅读</span><span class="sn">H2</span></div>
+        <div class="spec"><span class="si">22 / 500 / 1.25</span><span class="sd" style="font-size:22px;font-weight:500;line-height:1.25">dhammacakkaṃ</span><span class="sn">Headword</span></div>
+        <div class="spec"><span class="si">19 / 400 / 1.75</span><span class="sd pi" style="font-size:19px;line-height:1.75">Evaṃ me sutaṃ— ekaṃ samayaṃ bhagavā</span><span class="sn">Pali · mobile</span></div>
+        <div class="spec"><span class="si">18 / 400 / 1.70</span><span class="sd pi" style="font-size:18px;line-height:1.7">addhānamaggappaṭipanno hoti</span><span class="sn">Pali · desktop</span></div>
+        <div class="spec"><span class="si">17 / 500 / 1.30</span><span class="sd" style="font-size:17px;font-weight:500;line-height:1.3">梵网经 · Brahmajālasutta</span><span class="sn">H3</span></div>
+        <div class="spec"><span class="si">14 / 400 / 1.55</span><span class="sd" style="font-size:14px;line-height:1.55">为大量阅读原典而设计：以巴利原文为主体，逐词可查。</span><span class="sn">Body</span></div>
+        <div class="spec"><span class="si">12 / 500 / 1.45</span><span class="sd" style="font-size:12px;font-weight:500;line-height:1.45;color:var(--muted)">游行者须卑亦行于王舍城与那烂陀之间的大道上</span><span class="sn">Caption</span></div>
+        <div class="spec" style="border-bottom:0"><span class="si">11 / 500 / 1.0</span><span class="sd" style="font-size:11px;font-weight:500;letter-spacing:1.2px;text-transform:uppercase;color:var(--meta)">TIPIṬAKA · 三藏</span><span class="sn">Eyebrow +1.2px</span></div>
+      </div>
+      <p class="doc-note">字重仅 400 与 500，从不合成粗体；全篇无斜体 —— 需要强调时改用墨蓝或标签。所有数字（段落号、变格表、指标）启用 <span class="num">tabular-nums</span>。中文标题行高 1.22–1.35，正文 1.7–1.75；拉丁显示字距 -1.2px，中文显示字距 0.4px。</p>
+    </section>
+
+    <section class="block" data-od-id="s4-space">
+      <div class="section-head"><span class="section-num">03</span><h2 class="section-title">间距与圆角</h2></div>
+      <div class="tokgrid">
+        <div class="tokcard">
+          <h4>间距 · Spacing</h4>
+          <div class="bars">
+            <div class="bar"><span class="bl">--space-1</span><i style="width:4px"></i><span class="bv">4</span></div>
+            <div class="bar"><span class="bl">--space-2</span><i style="width:8px"></i><span class="bv">8</span></div>
+            <div class="bar"><span class="bl">--space-3</span><i style="width:12px"></i><span class="bv">12</span></div>
+            <div class="bar"><span class="bl">--space-4</span><i style="width:16px"></i><span class="bv">16</span></div>
+            <div class="bar"><span class="bl">--space-6</span><i style="width:24px"></i><span class="bv">24</span></div>
+            <div class="bar"><span class="bl">--space-7</span><i style="width:28px"></i><span class="bv">28</span></div>
+            <div class="bar"><span class="bl">--space-8</span><i style="width:32px"></i><span class="bv">32</span></div>
+            <div class="bar"><span class="bl">--space-12</span><i style="width:48px"></i><span class="bv">48</span></div>
+            <div class="bar"><span class="bl">--space-18</span><i style="width:72px"></i><span class="bv">72</span></div>
+            <div class="bar"><span class="bl">--space-22</span><i style="width:88px"></i><span class="bv">88</span></div>
+          </div>
+        </div>
+        <div class="tokcard">
+          <h4>圆角 · Radius</h4>
+          <div class="radii">
+            <figure><div class="rsq" style="border-radius:2px"></div><figcaption>2 · tag</figcaption></figure>
+            <figure><div class="rsq" style="border-radius:4px"></div><figcaption>4 · chip</figcaption></figure>
+            <figure><div class="rsq" style="border-radius:6px"></div><figcaption>6 · code</figcaption></figure>
+            <figure><div class="rsq" style="border-radius:8px"></div><figcaption>8 · card</figcaption></figure>
+            <figure><div class="rsq" style="border-radius:12px"></div><figcaption>12 · panel</figcaption></figure>
+            <figure><div class="rsq" style="border-radius:16px"></div><figcaption>16 · sheet</figcaption></figure>
+          </div>
+          <h4 style="margin-top:24px">高度 · Elevation</h4>
+          <div class="stackrow">
+            <span class="chip plain" style="box-shadow:none;padding:8px 12px">flat</span>
+            <span class="chip plain" style="box-shadow:var(--elev-ring);padding:8px 12px">ring</span>
+            <span class="chip plain" style="box-shadow:var(--elev-raised);padding:8px 12px">whisper</span>
+          </div>
+          <p class="doc-note">只有三层高度：无、1px 规线、<span class="num">0 4px 24px rgba(0,0,0,.05)</span>。禁止硬投影、玻璃拟态与多层阴影。</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="block" data-od-id="s4-icons">
+      <div class="section-head"><span class="section-num">04</span><h2 class="section-title">图标集</h2></div>
+      <p class="doc-note" style="margin-top:12px">全部为内联 SVG 线性图标，24px 网格、1.5px 描边、圆角端点、<span class="num">currentColor</span> 着色。不使用 emoji，也不以文字符号充当图标。</p>
+      <div class="iconwall">
+        <div class="iconcell"><svg class="ic" aria-hidden="true"><use href="#i-mark"/></svg><span>mark</span></div>
+        <div class="iconcell"><svg class="ic" aria-hidden="true"><use href="#i-search"/></svg><span>search</span></div>
+        <div class="iconcell"><svg class="ic" aria-hidden="true"><use href="#i-toc"/></svg><span>toc</span></div>
+        <div class="iconcell"><svg class="ic" aria-hidden="true"><use href="#i-settings"/></svg><span>settings</span></div>
+        <div class="iconcell"><svg class="ic" aria-hidden="true"><use href="#i-user"/></svg><span>user</span></div>
+        <div class="iconcell"><svg class="ic" aria-hidden="true"><use href="#i-panel"/></svg><span>panel</span></div>
+        <div class="iconcell"><svg class="ic" aria-hidden="true"><use href="#i-chev-r"/></svg><span>chevron</span></div>
+        <div class="iconcell"><svg class="ic" aria-hidden="true"><use href="#i-plus"/></svg><span>plus</span></div>
+        <div class="iconcell"><svg class="ic" aria-hidden="true"><use href="#i-check"/></svg><span>check</span></div>
+        <div class="iconcell"><svg class="ic" aria-hidden="true"><use href="#i-copy"/></svg><span>copy</span></div>
+        <div class="iconcell"><svg class="ic" aria-hidden="true"><use href="#i-bookmark"/></svg><span>bookmark</span></div>
+        <div class="iconcell"><svg class="ic" aria-hidden="true"><use href="#i-scroll"/></svg><span>scroll</span></div>
+        <div class="iconcell"><svg class="ic" aria-hidden="true"><use href="#i-book"/></svg><span>book</span></div>
+        <div class="iconcell"><svg class="ic" aria-hidden="true"><use href="#i-grid"/></svg><span>grid</span></div>
+        <div class="iconcell"><svg class="ic" aria-hidden="true"><use href="#i-layers"/></svg><span>layers</span></div>
+        <div class="iconcell"><svg class="ic" aria-hidden="true"><use href="#i-clock"/></svg><span>clock</span></div>
+        <div class="iconcell"><svg class="ic" aria-hidden="true"><use href="#i-arrow-r"/></svg><span>arrow</span></div>
+        <div class="iconcell"><svg class="ic" aria-hidden="true"><use href="#i-x"/></svg><span>x</span></div>
+        <div class="iconcell"><svg class="ic" aria-hidden="true"><use href="#i-table"/></svg><span>table</span></div>
+        <div class="iconcell"><svg class="ic" aria-hidden="true"><use href="#i-branch"/></svg><span>branch</span></div>
+        <div class="iconcell"><svg class="ic" aria-hidden="true"><use href="#i-quote"/></svg><span>quote</span></div>
+        <div class="iconcell"><svg class="ic" aria-hidden="true"><use href="#i-pin"/></svg><span>pin</span></div>
+        <div class="iconcell"><svg class="ic" aria-hidden="true"><use href="#i-split"/></svg><span>split</span></div>
+        <div class="iconcell"><svg class="ic" aria-hidden="true"><use href="#i-type"/></svg><span>type</span></div>
+      </div>
+    </section>
+
+    <section class="block" data-od-id="s4-components" style="padding-bottom:56px">
+      <div class="section-head"><span class="section-num">05</span><h2 class="section-title">组件</h2></div>
+      <div class="tokgrid">
+        <div class="tokcard">
+          <h4>按钮</h4>
+          <div class="stackrow">
+            <button class="btn btn-primary">应用为选词</button>
+            <button class="btn btn-secondary">继续</button>
+            <button class="btn btn-ghost">生词本</button>
+            <button class="btn btn-quiet">复制</button>
+            <button class="btn btn-primary" disabled>禁用</button>
+          </div>
+          <p class="doc-note">同一视口内主按钮仅一个。悬停时墨蓝按钮整体改用 <span class="num">--accent-active</span>（前景同步保持象牙白），次级按钮底色下沉至 <span class="num">--border</span>，文字一律变深、不变浅。</p>
+        </div>
+
+        <div class="tokcard">
+          <h4>标签与徽记</h4>
+          <div class="stackrow">
+            <span class="plabel">释</span><span class="plabel q">参</span>
+            <span class="splitmark" style="vertical-align:0">拆</span>
+            <span class="chip">nt</span><span class="chip">复合词</span><span class="chip">sandhi</span>
+            <span class="rchip is-open"><span class="dot"></span>dhammacakkaṃ</span>
+            <span class="rchip">bhagavā</span>
+          </div>
+          <p class="doc-note">标签底色一律使用预混实色十六进制（<span class="num">#EEF2F7 / #E4ECF5 / #D6E1EE</span>），不使用 rgba —— 打印渲染会重复叠印透明填充。</p>
+        </div>
+
+        <div class="tokcard">
+          <h4>义项选择行</h4>
+          <div class="mean is-on">
+            <span class="radio" aria-hidden="true"></span>
+            <span><span class="dict"><b>DPD</b> nt</span><span class="en">Dhamma teaching; lit. Dhamma wheel</span><span class="zh">法轮；佛法之教说（字面：法之轮）</span></span>
+          </div>
+          <div class="mean" style="margin-top:6px">
+            <span class="radio" aria-hidden="true"></span>
+            <span><span class="dict"><b>PTS PED</b> nt</span><span class="en">the wheel of the Law</span><span class="zh">法轮；法之宝。</span></span>
+          </div>
+        </div>
+
+        <div class="tokcard">
+          <h4>变格表</h4>
+          <table class="dtable">
+            <thead><tr><th>格</th><th>单数</th><th>复数</th></tr></thead>
+            <tbody>
+              <tr class="is-hit"><td>nom</td><td>dhammacakkaṃ</td><td><span class="v2">dhammacakkā</span></td></tr>
+              <tr><td>acc</td><td>dhammacakkaṃ</td><td><span class="v2">dhammacakkāni</span></td></tr>
+              <tr><td>instr</td><td>dhammacakkena</td><td>dhammacakkehi</td></tr>
+              <tr><td>dat</td><td>dhammacakkassa</td><td><span class="v2">dhammacakkānaṃ</span></td></tr>
+            </tbody>
+          </table>
+          <p class="doc-note">命中格以 <span class="num">#E4ECF5</span> 底 + 墨蓝文字标出；次要词形降为 <span class="num">--meta</span>。</p>
+        </div>
+      </div>
+    </section>
+
+  </div>
+</div></div>
+</section>
+</main>
+
+<script>
+/* ══════════════════════════════════════════════════════════════════
+   词典数据 · 全部来自 DPD (Digital Pāḷi Dictionary) 词条：
+   音标、语法、复合词构造、变格表均为其真实字段。
+   中文释义为本原型编译文本，非任何词典原文。
+   ══════════════════════════════════════════════════════════════════ */
+const DPD = {"dhammacakka":{"g":{"Lemma":"dhammacakka","IPA":"/d̪ʰəmmət͡ʃəkkə/","Grammar":"nt, comp","Construction":"dhamma + cakka","Compound":"kammadhāraya (dhamma + cakka)","Sanskrit":"dharmacakra"},"decl":[["nom",["dhammacakkaṃ"],["dhammacakkā","dhammacakkāni"]],["acc",["dhammacakkaṃ"],["dhammacakkāni","dhammacakke"]],["instr",["dhammacakkā","dhammacakkena"],["dhammacakkebhi","dhammacakkehi"]],["dat",["dhammacakkassa","dhammacakkāya"],["dhammacakkānaṃ"]],["abl",["dhammacakkato","dhammacakkamhā"],["dhammacakkebhi","dhammacakkehi"]],["gen",["dhammacakkassa"],["dhammacakkāna","dhammacakkānaṃ"]],["loc",["dhammacakkamhi","dhammacakkasmiṃ"],["dhammacakkesu"]],["voc",["dhammacakka","dhammacakkaṃ"],["dhammacakkā","dhammacakkāni"]],["in comps",["dhammacakka"],[]]]},"addhanamagga":{"g":{"Lemma":"addhānamaggappaṭipanna","IPA":"/əd̪d̪ʰɑːn̪əməggəppəʈɪpən̪n̪ə/","Grammar":"adj, comp","Construction":"addhāna + magga + paṭipanna","Compound":"dutiyā tappurisa (addhānamaggaṃ + paṭipanna)","Sanskrit":"adhvāna + mārga + pratipadya","Phonetic Variant":"addhānamaggapaṭipanna, addhānamaggappaṭippanna"},"decl":[["nom",["addhānamaggappaṭipanno"],["addhānamaggappaṭipannā","addhānamaggappaṭipannāse"]],["acc",["addhānamaggappaṭipannaṃ"],["addhānamaggappaṭipanne"]],["instr",["addhānamaggappaṭipannā","addhānamaggappaṭipannena"],["addhānamaggappaṭipannebhi","addhānamaggappaṭipannehi"]],["dat",["addhānamaggappaṭipannassa","addhānamaggappaṭipannāya"],["addhānamaggappaṭipannāna","addhānamaggappaṭipannānaṃ"]],["abl",["addhānamaggappaṭipannato","addhānamaggappaṭipannamhā"],["addhānamaggappaṭipannebhi","addhānamaggappaṭipannehi"]],["gen",["addhānamaggappaṭipannassa"],["addhānamaggappaṭipannāna","addhānamaggappaṭipannānaṃ"]],["loc",["addhānamaggappaṭipannamhi","addhānamaggappaṭipannasmiṃ"],["addhānamaggappaṭipannesu"]],["voc",["addhānamaggappaṭipanna","addhānamaggappaṭipannā"],["addhānamaggappaṭipannā"]],["in comps",["addhānamaggappaṭipanna"],[]]]},"bhagavant":{"g":{"Lemma":"bhagavant","IPA":"/bʰəgəʋən̪t̪/","Grammar":"masc, from bhaga","Construction":"√bhaj > bhag + a + vantbhaga + vant","Sanskrit":"bhagavat [bhaj]","Root Family":"√bhaj","Root":"√bhaj･1 a (divide, distribute)","Derivative":"taddhita (vant)"},"decl":[["nom",["bhagavanto","bhagavā"],["bhagavantā","bhagavanto"]],["acc",["bhagavantaṃ"],["bhagavante"]],["instr",["bhagavatā","bhagavantena"],["bhagavantehi"]],["dat",["bhagavato","bhagavantassa"],["bhagavataṃ","bhagavantānaṃ"]],["abl",["bhagavatā","bhagavato"],["bhagavantehi"]],["gen",["bhagavato","bhagavantassa"],["bhagavataṃ","bhagavantānaṃ"]],["loc",["bhagavati","bhagavantamhi"],["bhagavantesu"]],["voc",["bhagava","bhagavaṃ"],["bhagavantā","bhagavanto"]],["in comps",["bhagava","bhagavanta"],[]]]},"sammasambuddha":{"g":{"Lemma":"sammāsambuddha","IPA":"/s̪əmmɑːs̪əmbud̪d̪ʰə/","Grammar":"masc, comp","Construction":"sammā + sambuddha","Compound":"kammadhāraya (sammā + sambuddha)","Sanskrit":"samyaksambuddha","Antonym":"asammāsambuddha"},"decl":[["nom",["sammāsambuddho"],["sammāsambuddhā","sammāsambuddhāse"]],["acc",["sammāsambuddhaṃ"],["sammāsambuddhe"]],["instr",["sammāsambuddhā","sammāsambuddhena"],["sammāsambuddhebhi","sammāsambuddhehi"]],["dat",["sammāsambuddhassa","sammāsambuddhāya"],["sammāsambuddhānaṃ"]],["abl",["sammāsambuddhato","sammāsambuddhamhā"],["sammāsambuddhato","sammāsambuddhebhi"]],["gen",["sammāsambuddhassa"],["sammāsambuddhāna","sammāsambuddhānaṃ"]],["loc",["sammāsambuddhamhi","sammāsambuddhasmiṃ"],["sammāsambuddhesu"]],["voc",["sammāsambuddha","sammāsambuddhā"],["sammāsambuddhā"]],["in comps",["sammāsambuddha"],[]]]},"paribbajaka":{"g":{"Lemma":"paribbājaka","IPA":"/pəɾɪbbɑːd͡ʒəkə/","Grammar":"masc, agent, from paribbajati","Construction":"pari + √vaj > baj > bāj + *aka","Sanskrit":"parivrājaka [parivraj]","Root Family":"pari √vaj","Root":"√vaj･1 a (go on)","Derivative":"kita (*aka)"},"decl":[["nom",["paribbājako"],["paribbājakā","paribbājakāse"]],["acc",["paribbājakaṃ"],["paribbājake"]],["instr",["paribbājakā","paribbājakena"],["paribbājakebhi","paribbājakehi"]],["dat",["paribbājakassa","paribbājakāya"],["paribbājakānaṃ"]],["abl",["paribbājakato","paribbājakamhā"],["paribbājakato","paribbājakebhi"]],["gen",["paribbājakassa"],["paribbājakāna","paribbājakānaṃ"]],["loc",["paribbājakamhi","paribbājakasmiṃ"],["paribbājakesu"]],["voc",["paribbājaka","paribbājakā"],["paribbājakā"]],["in comps",["paribbājaka"],[]]]},"bhikkhu":{"g":{"Lemma":"bhikkhu","IPA":"/bʰɪkkʰu/","Grammar":"masc, from bhikkhati","Construction":"√bhikkh + u","Sanskrit":"bhikṣu [bhikṣ]","Root Family":"√bhikkh","Root":"√bhikkh･1 a (beg)","Derivative":"kita (u)","Synonym":"pabbajita"},"decl":[["nom",["bhikkhu"],["bhikkhavo","bhikkhū"]],["acc",["bhikkhunaṃ","bhikkhuṃ"],["bhikkhavo","bhikkhū"]],["instr",["bhikkhunā"],["bhikkhubhi","bhikkhuhi"]],["dat",["bhikkhuno","bhikkhussa"],["bhikkhunaṃ","bhikkhūnaṃ"]],["abl",["bhikkhuto","bhikkhunā"],["bhikkhubhi","bhikkhūhi"]],["gen",["bhikkhuno","bhikkhussa"],["bhikkhunaṃ","bhikkhūnaṃ"]],["loc",["bhikkhumhi","bhikkhusmiṃ"],["bhikkhusu","bhikkhūsu"]],["voc",["bhikkhu"],["bhikkhave","bhikkhavo"]],["in comps",["bhikkhu"],[]]]},"bhikkhusangha":{"g":{"Lemma":"bhikkhusaṅgha","IPA":"/bʰɪkkʰus̪əŋgʰə/","Grammar":"masc, comp","Construction":"bhikkhu + saṅgha","Compound":"chaṭṭhī tappurisa (bhikkhūnaṃ + saṅgha)","Sanskrit":"bhikṣusaṃgha","Phonetic Variant":"bhikkhusaṃgha"},"decl":[["nom",["bhikkhusaṅgho"],["bhikkhusaṅghā","bhikkhusaṅghāse"]],["acc",["bhikkhusaṅghaṃ"],["bhikkhusaṅghe"]],["instr",["bhikkhusaṅghā","bhikkhusaṅghena"],["bhikkhusaṅghebhi","bhikkhusaṅghehi"]],["dat",["bhikkhusaṅghassa","bhikkhusaṅghāya"],["bhikkhusaṅghānaṃ"]],["abl",["bhikkhusaṅghato","bhikkhusaṅghamhā"],["bhikkhusaṅghato","bhikkhusaṅghebhi"]],["gen",["bhikkhusaṅghassa"],["bhikkhusaṅghāna","bhikkhusaṅghānaṃ"]],["loc",["bhikkhusaṅghamhi","bhikkhusaṅghasmiṃ"],["bhikkhusaṅghesu"]],["voc",["bhikkhusaṅgha","bhikkhusaṅghā"],["bhikkhusaṅghā"]],["in comps",["bhikkhusaṅgha"],[]]]},"buddha":{"g":{"Lemma":"buddha","IPA":"/bud̪d̪ʰə/","Grammar":"masc, pp of bujjhati","Construction":"√budh + ta","Sanskrit":"buddha [budh]","Root Family":"√budh","Root":"√budh･3 ya (know, wake up)","Derivative":"kita (ta)","Synonym":"sambuddha"},"decl":[["nom",["buddho"],["buddhā","buddhāse"]],["acc",["buddhaṃ"],["buddhe"]],["instr",["buddhā","buddhena"],["buddhebhi","buddhehi"]],["dat",["buddhassa","buddhāya"],["buddhānaṃ"]],["abl",["buddhato","buddhamhā"],["buddhato","buddhebhi"]],["gen",["buddhassa"],["buddhāna","buddhānaṃ"]],["loc",["buddhamhi","buddhasmiṃ"],["buddhesu"]],["voc",["buddha","buddhā"],["buddhā"]],["in comps",["buddha"],[]]]},"dhamma":{"g":{"Lemma":"dhamma","IPA":"/d̪ʰəmmə/","Grammar":"masc, from dharati","Construction":"√dhar + ma","Sanskrit":"dharma [dhṛ]","Root Family":"√dhar","Root":"√dhar･1 a (hold, carry, endure)","Derivative":"kita (ma)"},"decl":[["nom",["dhammo"],["dhammā","dhammāse"]],["acc",["dhammaṃ"],["dhamme"]],["instr",["dhammā","dhammena"],["dhammebhi","dhammehi"]],["dat",["dhammassa","dhammāya"],["dhammānaṃ"]],["abl",["dhammato","dhammamhā"],["dhammato","dhammebhi"]],["gen",["dhammassa"],["dhammāna","dhammānaṃ"]],["loc",["dhammamhi","dhammasmiṃ"],["dhammesu"]],["voc",["dhamma","dhammā"],["dhammā"]],["in comps",["dhamma"],[]]]},"sangha":{"g":{"Lemma":"saṅgha","IPA":"/s̪əŋgʰə/","Grammar":"masc, from saṅghaṭeti","Construction":"saṃ + √ghaṭ + a","Sanskrit":"saṃgha [saṃghaṭ]","Root Family":"saṃ √ghaṭ","Root":"√ghaṭ･1 a (join together)","Derivative":"kita (a)","Phonetic Variant":"saṃgha"},"decl":[["nom",["saṅgho"],["saṅghā","saṅghāse"]],["acc",["saṅghaṃ"],["saṅghe"]],["instr",["saṅghā","saṅghena"],["saṅghebhi","saṅghehi"]],["dat",["saṅghassa","saṅghāya"],["saṅghānaṃ"]],["abl",["saṅghato","saṅghamhā"],["saṅghato","saṅghebhi"]],["gen",["saṅghassa"],["saṅghāna","saṅghānaṃ"]],["loc",["saṅghamhi","saṅghasmiṃ"],["saṅghesu"]],["voc",["saṅgha","saṅghā"],["saṅghā"]],["in comps",["saṅgha"],[]]]},"magga":{"g":{"Lemma":"magga","IPA":"/məggə/","Grammar":"masc, from maggeti","Construction":"√magg + a","Sanskrit":"mārga [mārg]","Root Family":"√magg","Root":"√magg･1 a (seek, search)","Derivative":"kita (a)","Synonym":"gamana, gamanamagga, pajja, patha, pantha","Antonym":"amagga"},"decl":[["nom",["maggo"],["maggā","maggāse"]],["acc",["maggaṃ"],["magge"]],["instr",["maggā","maggena"],["maggebhi","maggehi"]],["dat",["maggassa","maggāya"],["maggānaṃ"]],["abl",["maggato","maggamhā"],["maggato","maggebhi"]],["gen",["maggassa"],["maggāna","maggānaṃ"]],["loc",["maggamhi","maggasmiṃ"],["maggesu"]],["voc",["magga","maggā"],["maggā"]],["in comps",["magga"],[]]]},"cakka":{"g":{"Lemma":"cakka","IPA":"/t͡ʃəkkə/","Grammar":"nt","Sanskrit":"cakra"},"decl":[["nom",["cakkaṃ"],["cakkā","cakkāni"]],["acc",["cakkaṃ"],["cakkāni","cakke"]],["instr",["cakkā","cakkena"],["cakkebhi","cakkehi"]],["dat",["cakkassa","cakkāya"],["cakkānaṃ"]],["abl",["cakkato","cakkamhā"],["cakkebhi","cakkehi"]],["gen",["cakkassa"],["cakkāna","cakkānaṃ"]],["loc",["cakkamhi","cakkasmiṃ"],["cakkesu"]],["voc",["cakka","cakkaṃ"],["cakkā","cakkāni"]],["in comps",["cakka"],[]]]},"addhana":{"g":{"Lemma":"addhāna","IPA":"/əd̪d̪ʰɑːn̪ə/","Grammar":"nt, from addha","Construction":"addha + āna"}},"patipanna":{"g":{"Lemma":"paṭipanna","IPA":"/pəʈɪpən̪n̪ə/","Grammar":"pp of paṭipajjati (+dat)","Construction":"pati + √pad + na","Sanskrit":"pratipanna [pratipad]","Root Family":"pati √pad","Root":"√pad･3 ya (go, step)","Derivative":"kita (na)","Phonetic Variant":"paṭippanna"},"decl":[["nom",["paṭipanno"],["paṭipannā","paṭipannāse"]],["acc",["paṭipannaṃ"],["paṭipanne"]],["instr",["paṭipannena"],["paṭipannebhi","paṭipannehi"]],["dat",["paṭipannassa","paṭipannāya"],["paṭipannānaṃ"]],["abl",["paṭipannato","paṭipannamhā"],["paṭipannebhi","paṭipannehi"]],["gen",["paṭipannassa"],["paṭipannānaṃ"]],["loc",["paṭipannamhi","paṭipannasmiṃ"],["paṭipannesu"]],["voc",["paṭipanna","paṭipannā"],["paṭipannā"]]]},"evam":{"g":{"Lemma":"evaṃ","IPA":"/eːʋə̃/","Grammar":"ind, adv","Construction":"eva + aṃ","Sanskrit":"evam","Synonym":"iti, itthaṃ, tathā"}},"suta":{"g":{"Lemma":"suta","IPA":"/s̪ut̪ə/","Grammar":"pp of suṇāti","Construction":"√su + ta","Sanskrit":"śruta [śru]","Root Family":"√su","Root":"√su･4 ṇā (hear)","Derivative":"kita (ta)","Antonym":"asuta, assuta"},"decl":[["nom",["suto"],["sutā","sutāse"]],["acc",["sutaṃ"],["sute"]],["instr",["sutena"],["sutebhi","sutehi"]],["dat",["sutassa","sutāya"],["sutānaṃ"]],["abl",["sutato","sutamhā"],["sutebhi","sutehi"]],["gen",["sutassa"],["sutānaṃ"]],["loc",["sutamhi","sutasmiṃ"],["sutesu"]],["voc",["suta","sutā"],["sutā"]]]},"nalanda":{"g":{"Lemma":"nāḷandā","IPA":"/n̪ɑːɭən̪d̪ɑː/","Grammar":"fem","Sanskrit":"nālanda","Phonetic Variant":"nālandā"},"decl":[["nom",["nāḷandā"],["nāḷandā","nāḷandāyo"]],["acc",["nāḷandaṃ"],["nāḷandā","nāḷandāyo"]],["instr",["nāḷandā","nāḷandāya"],["nāḷandābhi","nāḷandāhi"]],["dat",["nāḷandāya"],["nāḷandānaṃ"]],["abl",["nāḷandato","nāḷandāto"],["nāḷandābhi","nāḷandāhi"]],["gen",["nāḷandāya"],["nāḷandānaṃ"]],["loc",["nāḷandāya","nāḷandāyaṃ"],["nāḷandāsu"]],["voc",["nāḷanda","nāḷande"],["nāḷandā","nāḷandāyo"]],["in comps",["nāḷanda","nāḷandā"],[]]]},"rajagaha":{"g":{"Lemma":"rājagaha","IPA":"/ɾɑːd͡ʒəgəɦə/","Grammar":"nt, comp","Construction":"rāja + gaha","Compound":"chaṭṭhī tappurisa (rañño + gaha)","Sanskrit":"rājagṛha"},"decl":[["nom",["rājagahaṃ"],["rājagahā","rājagahāni"]],["acc",["rājagahaṃ"],["rājagahāni","rājagahe"]],["instr",["rājagahā","rājagahena"],["rājagahebhi","rājagahehi"]],["dat",["rājagahassa","rājagahāya"],["rājagahānaṃ"]],["abl",["rājagahato","rājagahamhā"],["rājagahebhi","rājagahehi"]],["gen",["rājagahassa"],["rājagahāna","rājagahānaṃ"]],["loc",["rājagahamhi","rājagahasmiṃ"],["rājagahesu"]],["voc",["rājagaha","rājagahaṃ"],["rājagahā","rājagahāni"]],["in comps",["rājagaha"],[]]]}};
+
+const ZH = {
+  dhammacakka:{zh:"法轮；佛法之教说。（字面：法之轮）",zh2:"法輪。dhammacakkaṃ 为 dhammacakka 的中性单数主格／宾格形，喻佛陀所宣说的教法。"},
+  addhanamagga:{zh:"行于长途大道上的；在远道上行进的。",zh2:"行於長途大道者。由 addhāna（长途）＋ magga（道）＋ paṭipanna（已进入）构成。"},
+  bhagavant:{zh:"世尊；具福者、可敬者。对佛陀的尊称。",zh2:"世尊。具足福德与尊贵者，为对佛陀最常用的尊称之一。"},
+  sammasambuddha:{zh:"正等觉者；完全自觉悟者。",zh2:"正等覺者。sammā（正确地）＋ sambuddha（觉悟者），指无师自证正觉的佛陀。"},
+  paribbajaka:{zh:"游行者；出家游行求道者。（字面：四处行走者）",zh2:"遊行者。不属佛教僧团而四处游行、以乞食为生的出家修道者。"},
+  bhikkhu:{zh:"比丘；乞食者；受具足戒的僧人。",zh2:"比丘。由 √bhikkh（乞求）派生，谓以乞食维生的受具足戒者。"},
+  bhikkhusangha:{zh:"比丘僧团；僧众。",zh2:"比丘僧團。bhikkhu（比丘）＋ saṅgha（众、团体）的复合词。"},
+  buddha:{zh:"佛陀；觉悟者。",zh2:"佛陀。已觉悟者，此处指世尊。"},
+  dhamma:{zh:"法；教法；性质；事物。",zh2:"法。含义极广：教法、真理、事物的性质与状态。"},
+  sangha:{zh:"僧伽；僧团；众。",zh2:"僧伽。原义为「众、团体」，特指佛教僧团。"},
+  magga:{zh:"道；道路；圣道。",zh2:"道。既指实有的道路，亦指八支圣道等修行之道。"},
+  cakka:{zh:"轮；车轮；权威。",zh2:"輪。本义为车轮，引申为权威、统理、法之运转。"},
+  addhana:{zh:"长途；旅途；远行。",zh2:"長途。指遥远的路程与行程。"},
+  patipanna:{zh:"已进入…的；行于…的；实践者。",zh2:"已行、已入。paṭipajjati 的过去分词，常与道路、修行连用。"},
+  evam:{zh:"如是；这样；如此。",zh2:"如是。不变词，用于引述与肯定，经文开篇「如是我闻」即用此词。"},
+  suta:{zh:"已闻的；所闻。（suta 为 suṇāti 的过去分词）",zh2:"所聞。suṇāti（听）的过去分词，构成「如是我闻」的 sutaṃ。"},
+  nalanda:{zh:"那烂陀（地名，近王舍城）。",zh2:"那爛陀。摩揭陀国城镇，今印度比哈尔邦那烂陀。"},
+  rajagaha:{zh:"王舍城（摩揭陀国首都）。",zh2:"王舍城。摩揭陀国都城，今印度拉杰吉尔。"}
+};
+const PTS = {
+  dhammacakka:"the wheel of the Law; the treasure of the Dhamma",
+  addhanamagga:"entered on the high road; faring along the highway",
+  bhagavant:"the Blessed One, the Sublime One",
+  sammasambuddha:"the perfectly Enlightened One",
+  paribbajaka:"a wandering ascetic, a homeless mendicant",
+  bhikkhu:"a mendicant, a monk",
+  bhikkhusangha:"the Order of mendicants",
+  buddha:"the Enlightened One",
+  dhamma:"doctrine; the Law; mental state",
+  sangha:"the Order, the priesthood",
+  magga:"path, road; the Path",
+  cakka:"wheel",
+  addhana:"a journey, a distance, a long road",
+  patipanna:"entered on, walking, practising",
+  evam:"thus, so, in this way",
+  suta:"heard; learnt",
+  nalanda:"Nālandā (name of a town)",
+  rajagaha:"Rājagaha (name of a city)"
+};
+const HEAD = {
+  dhammacakka:"dhammacakkaṃ", addhanamagga:"addhānamaggappaṭipanno", bhagavant:"bhagavā",
+  sammasambuddha:"sammāsambuddho", paribbajaka:"paribbājako", bhikkhu:"bhikkhu",
+  bhikkhusangha:"bhikkhusaṅghena", buddha:"buddhassa", dhamma:"dhammassa", sangha:"saṅghassa",
+  magga:"maggo", cakka:"cakkaṃ", addhana:"addhānaṃ", patipanna:"paṭipanno",
+  evam:"evaṃ", suta:"sutaṃ", nalanda:"nāḷandā", rajagaha:"rājagahaṃ"
+};
+const POSZH = {
+  "nt":"nt","masc":"masc","fem":"fem","adj":"adj","ind":"ind","pp":"pp","comp":"复合词","sandhi":"sandhi"
+};
+const FAMILY = {
+  count: 578,
+  items: [
+    ["akusaladhamma","masc","bad quality; unwholesome state; unskilful quality"],
+    ["aggadhamma","masc","top teaching; highest doctrine"],
+    ["acavanadhamma","adj","not bound to fall; not destined to pass away"],
+    ["akusaladhammappahāna","nt","abandoning of bad qualities; giving up unskilful states"],
+    ["aggadhammasamāhita","adj","possessing the top teaching; having the highest doctrine"]
+  ]
+};
+
+const $ = (s, r) => (r || document).querySelector(s);
+const $$ = (s, r) => Array.from((r || document).querySelectorAll(s));
+
+/* English glosses: the DPD sense that fits this occurrence in DN 1. */
+const EN = {
+  dhammacakka: "Dhamma teaching; lit. Dhamma wheel",
+  addhanamagga: "travelling along the main road; undertaking a highway journey",
+  bhagavant: "Sublime One; Blessed One; Auspicious One; epithet of the Buddha",
+  sammasambuddha: "perfectly awakened Buddha; fully enlightened being",
+  paribbajaka: "homeless spiritual seeker; wandering ascetic; lit. who goes around",
+  bhikkhu: "monk; monastic; mendicant; fully ordained monk; lit. beggar",
+  bhikkhusangha: "community of monks; monastic order",
+  buddha: "Buddha; Awakened One",
+  dhamma: "teaching; discourse; doctrine (DPD sense 1.03)",
+  sangha: "community; fellowship; monastic order",
+  magga: "road; path; track; way",
+  cakka: "wheel",
+  addhana: "long road; highroad; journey",
+  patipanna: "followed a path; undertaken a journey; lit. gone along",
+  evam: "thus; this; like this; in the same manner; such",
+  suta: "heard; learnt",
+  nalanda: "name of a town near Rājagaha; modern day Nalanda",
+  rajagaha: "name of a city; capital of Magadha; lit. king's house"
+};
+/* Case matched by the inflected form shown as the headword. */
+const HIT = {
+  dhammacakka: "nom", addhanamagga: "nom", bhagavant: "nom", sammasambuddha: "nom",
+  paribbajaka: "nom", bhikkhu: "voc", bhikkhusangha: "instr", buddha: "gen",
+  dhamma: "gen", sangha: "gen", magga: "nom", cakka: "nom", suta: "nom",
+  nalanda: "nom", rajagaha: "nom", patipanna: "nom"
+};
+/* Legitimate alternate resolution of the compound, where DPD lists one. */
+const ALT = { dhammacakka: "dhamma + cakkaṃ" };
+
+function splitSide(a) {
+  const d = DPD[a] || {};
+  const g = d.g || {};
+  return {
+    head: HEAD[a] || a, ipa: g.IPA || "", grammar: g.Grammar || "",
+    construction: g.Construction || "", compound: g.Compound || "",
+    sanskrit: g.Sanskrit || "", en: EN[a] || "", decl: d.decl || []
+  };
+}
+function chipList(a) {
+  const g = (DPD[a] && DPD[a].g) || {};
+  const gr = g.Grammar || "";
+  const list = [];
+  const m = gr.match(/^(nt|masc|fem|neut|adj|ind|pp|pr|ger|inf|aor|opt)\b/);
+  if (m) list.push(m[1]);
+  if (g.Compound) { list.push("复合词"); list.push("sandhi"); }
+  return list.slice(0, 3);
+}
+function buildMeanings(a, e) {
+  const z = ZH[a] || {};
+  return [
+    { d: "DPD", dsub: chipList(a)[0] || "", en: e.en, zh: z.zh || "" },
+    { d: "巴漢詞典", dsub: "编译", en: "", zh: z.zh2 || z.zh || "" },
+    { d: "PTS PED", dsub: chipList(a)[0] || "", en: PTS[a] || "", zh: "" }
+  ];
+}
+function partsOf(a) {
+  const g = (DPD[a] && DPD[a].g) || {};
+  if (!g.Compound || !g.Construction) return null;
+  const raw = g.Construction.split("+").map(s => s.trim()).filter(Boolean);
+  if (raw.length < 2 || raw.length > 4) return null;
+  if (raw.some(p => /[√>*()\[\]0-9]/.test(p) || /\s/.test(p))) return null;
+  if (raw.some(p => !/^[a-zāīūṭḍṇṅñṃḷ]+$/i.test(p))) return null;
+  return raw;
+}
+function has(a) { return Object.prototype.hasOwnProperty.call(DPD, a); }
+function partChip(p) {
+  return has(p)
+    ? '<button class="cchip" data-jump="' + p + '"><span class="pi">' + p + '</span><svg class="ic ic-sm" aria-hidden="true"><use href="#i-chev-r"/></svg></button>'
+    : '<span class="cchip"><span class="pi">' + p + '</span></span>';
+}
+
+/* ── rendering ───────────────────────────────────────────────────── */
+let CUR = "dhammacakka";
+const state = { tab: "meaning", meanings: {} };
+
+function headblockHTML(a) {
+  const e = splitSide(a);
+  const chips = chipList(a);
+  return '<div class="headword pi">' + e.head + '</div>'
+    + (e.ipa ? '<div class="ipa">' + e.ipa + '</div>' : '')
+    + '<div class="chips">' + chips.map((c, i) =>
+        '<span class="chip' + (i === 0 ? '' : ' plain') + '">' + (POSZH[c] || c) + '</span>').join('') + '</div>';
+}
+function meaningHTML(a) {
+  const e = splitSide(a);
+  const rows = buildMeanings(a, e);
+  const sel = state.meanings[a] == null ? 0 : state.meanings[a];
+  let h = '<section><div class="sechead"><span class="sectitle">释义 · 选择你要采用的意义</span><span class="secmeta num">' + rows.length + ' 条</span></div>';
+  rows.forEach((r, i) => {
+    h += '<button class="mean' + (i === sel ? ' is-on' : '') + '" data-mean="' + a + '" data-i="' + i + '">'
+      + '<span class="radio" aria-hidden="true"></span><span style="flex:1;min-width:0">'
+      + '<span class="dict"><b>' + r.d + '</b>' + (r.dsub ? ' · ' + r.dsub : '') + '</span>'
+      + (r.en ? '<span class="en">' + r.en + '</span>' : '')
+      + (r.zh ? '<span class="zh">' + r.zh + '</span>' : '') + '</span></button>';
+  });
+  h += '<button class="ghostlink" style="margin-top:9px" data-addmean><svg class="ic ic-sm" aria-hidden="true"><use href="#i-plus"/></svg>添加自定义释义</button></section>';
+
+  const parts = partsOf(a);
+  if (parts) {
+    h += '<section><div class="sechead"><span class="sectitle">复合词拆解</span><span class="secmeta pi">' + (e.compound || "") + '</span></div><div class="cchips">';
+    parts.forEach(p => { h += partChip(p); });
+    if (ALT[a]) {
+      h += '<span class="cchip alt"><span class="op">异读</span><span class="pi">' + ALT[a] + '</span></span>';
+    }
+    h += '</div><p class="caption">点击任一部分继续查词' + (e.compound ? ' · DPD 拆解：' + e.compound : '') + '</p></section>';
+  }
+
+  const d = DPD[a] || {};
+  if (d.decl) {
+    h += declHTML(a, 5, true);
+  }
+  h += '<p class="provenance">英文释义与语法数据引自 DPD (Digital Pāḷi Dictionary)；中文释义为本阅读器编译文本，非任何词典原文。巴利原文：Mahāsaṅgīti Tipiṭaka。</p>';
+  return h;
+}
+function declHTML(a, limit, preview) {
+  const d = DPD[a] || {};
+  const e = splitSide(a);
+  if (!d.decl) return '<section><div class="sechead"><span class="sectitle">变格</span></div><p class="caption">'
+    + (/\bind\b/.test(e.grammar) ? "此为不变词（indeclinable），没有变格形式。" : "DPD 该词条未附变格表；此词的变格可参照同类词干。")
+    + '</p></section>';
+  const rows = preview ? d.decl.slice(0, limit) : d.decl;
+  const hit = HIT[a] || "nom";
+  const multi = d.decl[0] && d.decl[0].length > 3;
+  let h = '<section><div class="sechead"><span class="sectitle">变格表</span><span class="secmeta">' + (e.grammar || "") + '</span></div>'
+    + '<table class="dtable"><thead><tr><th>格</th><th>单数</th><th>复数</th></tr></thead><tbody>';
+  rows.forEach(r => {
+    const sg = (r[1] || []).join(" "), pl = (r[2] || []).join(" ");
+    h += '<tr class="' + (r[0] === hit ? 'is-hit' : '') + '"><td>' + r[0] + '</td><td>' + sg + '</td><td><span class="v2">' + pl + '</span></td></tr>';
+  });
+  h += '</tbody></table>';
+  h += '<p class="caption">' + (multi ? '上表为阳性单数／复数；该形容词另有阴性、中性变格。' : '') + '命中格以墨蓝标出，灰色为次要词形。数据来源 DPD。</p>';
+  h += preview
+    ? '<button class="ghostlink" style="margin-top:9px" data-tabjump="decl"><svg class="ic ic-sm" aria-hidden="true"><use href="#i-table"/></svg>展开完整变格表</button>'
+    : '';
+  return h + '</section>';
+}
+function grammarHTML(a) {
+  const e = splitSide(a);
+  const g = (DPD[a] && DPD[a].g) || {};
+  const rows = [["词干", e.head], ["音标", e.ipa], ["语法", g.Grammar], ["构造", g.Construction],
+    ["复合类型", g.Compound], ["词根", g["Root Family"] || g["Root"]], ["梵语", g.Sanskrit], ["派生", g["Derivative"]]]
+    .filter(r => r[1]);
+  let h = '<section><div class="sechead"><span class="sectitle">语法分析</span></div><table class="gtable">';
+  rows.forEach(r => { h += '<tr><th>' + r[0] + '</th><td class="pi">' + r[1] + '</td></tr>'; });
+  h += '</table></section>';
+  const pos = chipList(a);
+  h += '<section><div class="sechead"><span class="sectitle">词性标记</span></div><div class="cchips">'
+     + pos.map((c, i) => '<span class="chip' + (i === 0 ? '' : ' plain') + '">' + (POSZH[c] || c) + '</span>').join('')
+     + '</div><p class="caption">此处 ' + e.head + ' 以 ' + (e.construction || "单一词干") + ' 出现在本段经文中。</p></section>';
+  return h;
+}
+function familyHTML(a) {
+  const parts = partsOf(a);
+  let h = '<section><div class="sechead"><span class="sectitle">词族 · 同族复合词</span><span class="secmeta num">' + FAMILY.count + '</span></div>';
+  FAMILY.items.forEach(it => {
+    h += '<div class="famitem"><span class="fw">' + it[0] + '</span><span class="fg">' + it[1] + ' · ' + it[2] + '</span></div>';
+  });
+  h += '<p class="caption">DPD 中收录 ' + FAMILY.count + ' 条含 <span class="pi">dhamma</span> 的复合词。</p></section>';
+  if (parts) {
+    h += '<section><div class="sechead"><span class="sectitle">可继续拆解的部分</span></div><div class="cchips">'
+      + parts.map(partChip).join('')
+      + '</div></section>';
+  }
+  return h;
+}
+function bodyHTML(a) {
+  if (state.tab === "grammar") return grammarHTML(a);
+  if (state.tab === "decl") return declHTML(a, 99, false);
+  if (state.tab === "family") return familyHTML(a);
+  return meaningHTML(a);
+}
+function render(a) {
+  if (!a || !has(a)) a = has(CUR) ? CUR : "dhammacakka";
+  CUR = a;
+  $$("[data-headblock]").forEach(n => { n.innerHTML = headblockHTML(a); });
+  $$("[data-body]").forEach(n => { n.innerHTML = bodyHTML(a); });
+  $$(".rchip").forEach(c => c.classList.toggle("is-open", c.dataset.jump === a));
+  $$(".vitem").forEach(v => v.classList.toggle("is-open", v.dataset.jump === a));
+  try { localStorage.setItem("ptr.word", a); } catch (e) {}
+}
+function setTab(t) {
+  state.tab = t;
+  $$(".tab").forEach(x => x.setAttribute("aria-selected", String(x.dataset.tab === t)));
+  $$("[data-body]").forEach(n => { n.innerHTML = bodyHTML(CUR); });
+}
+
+/* ── events ──────────────────────────────────────────────────────── */
+document.addEventListener("click", ev => {
+  const t = ev.target;
+  const jump = t.closest("[data-jump]");
+  if (jump) { if (has(jump.dataset.jump)) render(jump.dataset.jump); return; }
+  const tab = t.closest(".tab");
+  if (tab) { setTab(tab.dataset.tab); return; }
+  const tj = t.closest("[data-tabjump]");
+  if (tj) { setTab(tj.dataset.tabjump); return; }
+  const mean = t.closest("[data-mean]");
+  if (mean) { state.meanings[mean.dataset.mean] = Number(mean.dataset.i); render(mean.dataset.mean); return; }
+  const addm = t.closest("[data-addmean]");
+  if (addm) { return; }
+  const w = t.closest(".w");
+  if (w && w.dataset.w && has(w.dataset.w)) {
+    $$(".w.is-sel").forEach(x => x.classList.remove("is-sel"));
+    $$(".cmp.is-sel").forEach(x => x.classList.remove("is-sel"));
+    const host = w.closest(".cmp");
+    (host || w).classList.add("is-sel");
+    if (host) host.classList.add("cmp");
+    render(w.dataset.w);
+    return;
+  }
+  const tog = t.closest("[data-toggle]");
+  if (tog) {
+    const g = document.getElementById(tog.dataset.toggle);
+    const open = tog.getAttribute("aria-expanded") === "true";
+    tog.setAttribute("aria-expanded", String(!open));
+    if (g) g.hidden = open;
+    return;
+  }
+  const an = t.closest("[data-annotate]");
+  if (an) {
+    const card = an.closest(".pcard");
+    const wrap = document.createElement("div");
+    wrap.className = "annot";
+    wrap.innerHTML = '<span class="av" aria-hidden="true">陈</span><div style="flex:1"><div class="who">陈 · 刚刚</div>'
+      + '<textarea class="mine" rows="2" placeholder="写下你的批注…" style="margin-top:5px"></textarea></div>';
+    an.replaceWith(wrap);
+    const ta = wrap.querySelector("textarea"); if (ta) ta.focus();
+    return;
+  }
+  const apply = t.closest("[data-apply]");
+  if (apply) {
+    apply.textContent = "已应用";
+    setTimeout(() => { apply.textContent = apply.closest(".sheet-foot") ? "应用选词" : "应用为选词"; }, 1400);
+    return;
+  }
+  const cp = t.closest("[data-copy]");
+  if (cp) {
+    const txt = (HEAD[CUR] || "").replace(/ṃ$/, "ṃ");
+    if (navigator.clipboard) navigator.clipboard.writeText(txt).catch(() => {});
+    cp.dataset.old = cp.innerHTML; cp.innerHTML = '<svg class="ic ic-sm" aria-hidden="true"><use href="#i-check"/></svg>已复制';
+    setTimeout(() => { if (cp.dataset.old) cp.innerHTML = cp.dataset.old; }, 1400);
+    return;
+  }
+  const wb = t.closest("[data-wordbook]");
+  if (wb) {
+    wb.dataset.old = wb.innerHTML; wb.innerHTML = '<svg class="ic ic-sm" aria-hidden="true"><use href="#i-check"/></svg>已加入';
+    setTimeout(() => { if (wb.dataset.old) wb.innerHTML = wb.dataset.old; }, 1400);
+    return;
+  }
+  const col = t.closest("#collapseTree");
+  if (col) { $("#ws1").classList.add("collapsed"); $("#treeRail").hidden = false; $$("#ws1 .tree-full").forEach(n => n.hidden = true); return; }
+  const exp = t.closest("#expandTree");
+  if (exp) { $("#ws1").classList.remove("collapsed"); $("#treeRail").hidden = true; $$("#ws1 .tree-full").forEach(n => n.hidden = false); return; }
+});
+
+/* translation save state */
+$$("[data-translation]").forEach(ta => {
+  const note = $('[data-save-for="' + ta.id + '"]');
+  if (!note) return;
+  const initial = note.innerHTML;
+  let timer = null;
+  ta.addEventListener("input", () => {
+    note.innerHTML = '<svg class="ic ic-sm" aria-hidden="true"><use href="#i-clock"/></svg>未保存';
+    note.classList.add("is-dirty");
+    clearTimeout(timer);
+    timer = setTimeout(() => {
+      const d = new Date();
+      const hh = String(d.getHours()).padStart(2, "0"), mm = String(d.getMinutes()).padStart(2, "0");
+      note.innerHTML = '<svg class="ic ic-sm" aria-hidden="true"><use href="#i-check"/></svg>已保存 · ' + hh + ":" + mm;
+      note.classList.remove("is-dirty");
+    }, 900);
+  });
+});
+
+/* screen switcher */
+const TABS = $$(".proto-tab");
+function show(id) {
+  $$(".screen").forEach(s => { s.hidden = s.id !== id; });
+  TABS.forEach(t => t.setAttribute("aria-selected", String(t.dataset.screen === id)));
+  try { localStorage.setItem("ptr.screen", id); } catch (e) {}
+  window.scrollTo(0, 0);
+}
+TABS.forEach(t => t.addEventListener("click", () => show(t.dataset.screen)));
+
+/* ⌘K / Ctrl-K focuses the search field */
+document.addEventListener("keydown", e => {
+  if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
+    e.preventDefault();
+    const cur = $$(".screen").find(s => !s.hidden) || document;
+    const inp = cur.querySelector('input[type="search"]');
+    if (inp) inp.focus();
+  }
+});
+
+/* boot */
+let first = "s1", word = "dhammacakka";
+try {
+  const s = localStorage.getItem("ptr.screen"); if (s && document.getElementById(s)) first = s;
+  const w = localStorage.getItem("ptr.word"); if (w && HEAD[w]) word = w;
+} catch (e) {}
+render(word);
+show(first);
+</script>
+</body>
+</html>

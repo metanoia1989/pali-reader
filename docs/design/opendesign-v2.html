@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>巴利三藏阅读器 — 首页与目录栏</title>
+<style>
+/* ── kami tokens ────────────────────────────────────────────── */
+:root{
+  --bg:#f5f4ed; --surface:#faf9f5; --surface-warm:#e8e6dc;
+  --fg:#141413; --fg-2:#3d3d3a; --muted:#504e49; --meta:#6b6a64;
+  --border:#e8e6dc; --border-soft:#e5e3d8;
+  --accent:#1b365d; --accent-on:#faf9f5; --accent-active:#142a48;
+  --tag-bg-soft:#e4ecf5; --tag-bg-base:#d6e1ee;
+  --font-display:'Iowan Old Style', Palatino, Georgia, "Songti SC", "Source Han Serif SC", serif;
+  --font-body:'Iowan Old Style', Palatino, Georgia, "Songti SC", "Source Han Serif SC", serif;
+  --radius-sm:4px; --radius-md:8px; --radius-lg:12px;
+  --elev-ring:0 0 0 1px var(--border);
+  --elev-raised:0 4px 24px rgba(0,0,0,.05);
+  --focus-ring:0 0 0 2px var(--accent-active);
+  --motion-base:200ms; --ease-standard:cubic-bezier(.2,0,0,1);
+  --container-max:1440px; --gutter:64px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{-webkit-text-size-adjust:100%}
+body{
+  background:var(--bg); color:var(--fg);
+  font-family:var(--font-body); font-weight:400;
+  font-size:14px; line-height:1.5;
+  -webkit-font-smoothing:antialiased;
+}
+button{font:inherit;color:inherit;background:none;border:0;text-align:left;cursor:pointer;border-radius:var(--radius-sm)}
+a{color:inherit;text-decoration:none}
+ul{list-style:none}
+strong,b{font-weight:500}
+:focus-visible{outline:none;box-shadow:var(--focus-ring)}
+.num{font-variant-numeric:tabular-nums}
+
+.page{max-width:var(--container-max);margin:0 auto;padding:76px var(--gutter) 96px}
+
+/* ── hero ───────────────────────────────────────────────────── */
+.eyebrow{
+  font:500 12px/1 var(--font-body); letter-spacing:1.2px;
+  color:var(--accent); text-transform:uppercase;
+}
+.hero h1{
+  font:500 46px/1.32 var(--font-display); letter-spacing:.5px;
+  color:var(--fg); margin:18px 0 0;
+}
+.lede{
+  font:400 15px/1.55 var(--font-body); color:var(--muted);
+  margin-top:14px; max-width:60ch;
+}
+.metrics{
+  margin-top:26px; display:flex; flex-wrap:wrap; align-items:baseline; gap:10px;
+  font:400 14px/1 var(--font-body); color:var(--muted);
+}
+.metrics b{font-weight:500;font-size:15px;color:var(--fg)}
+.metrics .sep{color:var(--meta);font-size:12px}
+
+/* ── bento ──────────────────────────────────────────────────── */
+.bento{margin-top:44px;display:flex;flex-direction:column;gap:24px}
+.row-pair{display:grid;grid-template-columns:1fr 1.45fr;gap:24px;align-items:start}
+.card{
+  background:var(--surface); border:1px solid var(--border);
+  border-radius:var(--radius-md); padding:22px 22px 16px;
+  transition:box-shadow var(--motion-base) var(--ease-standard);
+}
+.card:hover{box-shadow:var(--elev-raised)}
+.card-head{display:flex;align-items:baseline;flex-wrap:wrap;gap:6px 8px;margin-bottom:14px}
+.card-title{font:500 17px/1.3 var(--font-display);color:var(--fg)}
+.card-title .t-pi{font-size:13.5px;color:var(--muted)}
+.card-count{
+  font:500 12px/1 var(--font-body);letter-spacing:.4px;color:var(--meta);
+  font-variant-numeric:tabular-nums;
+}
+.books{display:flex;flex-direction:column;gap:1px}
+.book{
+  display:flex;align-items:baseline;justify-content:space-between;gap:16px;
+  width:100%;padding:7px 10px;border-radius:var(--radius-sm);
+  font:400 14px/1.45 var(--font-body);color:var(--fg);
+  transition:background var(--motion-base) var(--ease-standard),color var(--motion-base) var(--ease-standard);
+}
+.book .pi{color:var(--meta);font-size:12.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.book:hover{background:var(--surface-warm);color:var(--accent)}
+.book:hover .pi{color:var(--accent)}
+.more{
+  align-self:flex-start;margin-top:8px;padding:5px 10px;border-radius:var(--radius-sm);
+  font:500 12.5px/1.4 var(--font-body);letter-spacing:.3px;color:var(--accent);
+  transition:background var(--motion-base) var(--ease-standard),color var(--motion-base) var(--ease-standard);
+}
+.more .caret{font-size:10px;margin-left:2px}
+.more:hover{background:var(--surface-warm);color:var(--accent-active)}
+
+.card-wide{padding:22px 22px 18px}
+.nikayas{display:grid;grid-template-columns:repeat(5,1fr);margin-top:4px}
+.nk{padding:2px 20px;border-left:1px solid var(--border-soft)}
+.nk:first-child{padding-left:0;border-left:0}
+.nk:last-child{padding-right:0}
+.nk-head{
+  font:500 12px/1 var(--font-body);letter-spacing:.6px;color:var(--accent);
+  padding:0 10px 10px;font-variant-numeric:tabular-nums;
+}
+.book-stack{flex-direction:column;align-items:flex-start;gap:0}
+.book-stack .pi{font-size:11px;line-height:1.5;max-width:100%}
+
+/* ── piece 2 : rail ─────────────────────────────────────────── */
+.rail-block{
+  margin-top:72px;padding-top:56px;border-top:1px solid var(--border);
+  display:flex;flex-direction:column;gap:24px;width:300px;
+}
+.rail{
+  width:300px;height:860px;background:var(--surface);
+  border:1px solid var(--border);border-radius:var(--radius-lg);
+  display:flex;flex-direction:column;overflow:hidden;
+}
+.rail-head{
+  display:flex;align-items:center;justify-content:space-between;gap:12px;
+  padding:18px 16px 14px;border-bottom:1px solid var(--border-soft);
+}
+.rail-head .eyebrow{font-size:11px;letter-spacing:1px}
+.icon-btn{
+  display:grid;place-items:center;width:28px;height:28px;border-radius:var(--radius-sm);
+  color:var(--meta);
+  transition:background var(--motion-base) var(--ease-standard),color var(--motion-base) var(--ease-standard);
+}
+.icon-btn:hover{background:var(--surface-warm);color:var(--accent)}
+.rail-body{flex:1;overflow:hidden;padding:14px 10px 10px}
+.tree{display:flex;flex-direction:column;gap:1px}
+.tree-item{
+  display:flex;align-items:baseline;justify-content:space-between;gap:8px;
+  width:100%;padding:6px 10px;border-radius:var(--radius-sm);
+  font:500 14px/1.45 var(--font-body);color:var(--fg);
+  transition:background var(--motion-base) var(--ease-standard),color var(--motion-base) var(--ease-standard);
+}
+.tree-item:hover{background:var(--surface-warm);color:var(--accent)}
+.tree-item:hover .t-count{color:var(--accent)}
+.t-count{font:400 11.5px/1 var(--font-body);color:var(--meta);font-variant-numeric:tabular-nums}
+.t-l1{padding-left:24px}
+.t-l2{padding-left:38px;font-weight:400}
+.is-current{
+  color:var(--accent);background:var(--tag-bg-soft);
+  box-shadow:inset 2px 0 0 var(--accent);border-radius:0 var(--radius-sm) var(--radius-sm) 0;
+}
+.is-current:hover{background:var(--tag-bg-base);color:var(--accent-active)}
+
+.contents{margin-top:16px;padding-top:14px;border-top:1px solid var(--border-soft);display:flex;flex-direction:column;gap:1px}
+.c-row{
+  display:block;width:100%;padding:5px 10px;border-radius:var(--radius-sm);
+  color:var(--fg-2);
+  transition:background var(--motion-base) var(--ease-standard),color var(--motion-base) var(--ease-standard);
+}
+.c-row:hover{background:var(--surface-warm);color:var(--accent)}
+.c-l1{font:500 15px/1.5 var(--font-body);color:var(--fg)}
+.c-l2{font:400 14.5px/1.5 var(--font-body);padding-left:24px}
+.c-l3{font:400 13.5px/1.5 var(--font-body);padding-left:38px}
+.c-current{
+  color:var(--accent);background:var(--tag-bg-soft);
+  box-shadow:inset 2px 0 0 var(--accent);border-radius:0 var(--radius-sm) var(--radius-sm) 0;
+}
+.c-current:hover{background:var(--tag-bg-base);color:var(--accent-active)}
+
+.rail-foot{
+  display:flex;align-items:center;gap:12px;
+  padding:14px 16px;border-top:1px solid var(--border-soft);
+}
+.ring{display:block;color:var(--accent);font-variant-numeric:tabular-nums}
+.rail-foot .foot-label{font:500 12px/1.35 var(--font-body);letter-spacing:.4px;color:var(--muted)}
+
+/* ── type-scale note ────────────────────────────────────────── */
+.type-note{
+  width:300px;background:var(--surface);border:1px solid var(--border);
+  border-radius:var(--radius-md);padding:16px 16px 14px;
+}
+.note-label{
+  font:500 12px/1 var(--font-body);letter-spacing:1.2px;color:var(--fg-2);
+  padding-bottom:12px;border-bottom:1px solid var(--border-soft);
+}
+.note-group{padding-top:12px}
+.note-cap{
+  font:400 11px/1.4 var(--font-body);letter-spacing:.6px;color:var(--meta);
+  padding:0 10px 4px;
+}
+.note-rows{display:flex;flex-direction:column}
+.note-rows li{padding:3px 10px;border-radius:var(--radius-sm)}
+.note-too-small li{font:400 11px/1.5 var(--font-body);color:var(--meta)}
+.note-good li{font:400 13.5px/1.5 var(--font-body);color:var(--fg-2)}
+.note-group + .note-group{margin-top:12px;border-top:1px solid var(--border-soft)}
+
+@media (max-width:1024px){
+  .page{padding:56px 32px 72px}
+  .row-pair{grid-template-columns:1fr}
+  .nikayas{grid-template-columns:1fr 1fr}
+  .nk{padding:0 0 16px;border-left:0;border-top:1px solid var(--border-soft);padding-top:14px}
+  .nk:first-child{padding-top:0;border-top:0}
+}
+@media (max-width:640px){
+  .page{padding:40px 20px 64px}
+  .hero h1{font-size:34px;line-height:1.34}
+  .nikayas{grid-template-columns:1fr}
+  .rail,.type-note,.rail-block{width:100%}
+  .rail{height:auto;min-height:640px}
+}
+</style>
+</head>
+<body>
+<main class="page">
+
+  <!-- ═══════════ Piece 1 — 首页 ═══════════ -->
+  <section class="hero" data-od-id="home-hero">
+    <p class="eyebrow" data-od-id="hero-eyebrow">TIPIṬAKA · 三藏</p>
+    <h1 data-od-id="hero-title">巴利三藏阅读器</h1>
+    <p class="lede" data-od-id="hero-lede">巴利原文、汉译与词条注释三段并列，逐段推进，不打断阅读。</p>
+    <p class="metrics num" data-od-id="hero-metrics">
+      <span><b>179</b> 部典籍</span>
+      <span class="sep">·</span>
+      <span><b>309,536</b> 段落</span>
+      <span class="sep">·</span>
+      <span><b>89,114</b> 词条</span>
+    </p>
+  </section>
+
+  <section class="bento" data-od-id="canon-bento">
+
+    <div class="row-pair">
+      <article class="card" data-od-id="card-vinaya">
+        <header class="card-head">
+          <h2 class="card-title">律藏 <span class="t-pi">Vinaya Piṭaka</span> <span class="card-count">· 5 部</span></h2>
+        </header>
+        <ul class="books">
+          <li><button class="book" data-od-id="book-parajika"><span class="zh">波罗夷</span><span class="pi">pārājikapāḷi</span></button></li>
+          <li><button class="book" data-od-id="book-pacittiya"><span class="zh">波逸提</span><span class="pi">pācittiyapāḷi</span></button></li>
+          <li><button class="book" data-od-id="book-mahavagga"><span class="zh">大品</span><span class="pi">mahāvaggapāḷi</span></button></li>
+          <li><button class="book" data-od-id="book-culavagga"><span class="zh">小品</span><span class="pi">cūḷavaggapāḷi</span></button></li>
+          <li><button class="book" data-od-id="book-parivara"><span class="zh">附随</span><span class="pi">parivārapāḷi</span></button></li>
+        </ul>
+      </article>
+
+      <article class="card" data-od-id="card-abhidhamma">
+        <header class="card-head">
+          <h2 class="card-title">论藏 <span class="t-pi">Abhidhamma Piṭaka</span> <span class="card-count">· 13 部</span></h2>
+        </header>
+        <ul class="books">
+          <li><button class="book" data-od-id="book-dhammasangani"><span class="zh">法聚论</span><span class="pi">dhammasaṅgaṇīpāḷi</span></button></li>
+          <li><button class="book" data-od-id="book-vibhanga"><span class="zh">分别论</span><span class="pi">vibhaṅgapāḷi</span></button></li>
+          <li><button class="book" data-od-id="book-dhatukatha"><span class="zh">界论</span><span class="pi">dhātukathāpāḷi</span></button></li>
+          <li><button class="book" data-od-id="book-puggalapannatti"><span class="zh">人施设论</span><span class="pi">puggalapaññattipāḷi</span></button></li>
+          <li><button class="book" data-od-id="book-kathavatthu"><span class="zh">论事</span><span class="pi">kathāvatthupāḷi</span></button></li>
+          <li><button class="book" data-od-id="book-yamaka-1"><span class="zh">双论（第一册）</span><span class="pi">yamakapāḷi (pa)</span></button></li>
+        </ul>
+        <button class="more" data-od-id="more-abhidhamma">还有 7 部<span class="caret">▾</span></button>
+      </article>
+    </div>
+
+    <article class="card card-wide" data-od-id="card-sutta">
+      <header class="card-head">
+        <h2 class="card-title">经藏 <span class="t-pi">Sutta Piṭaka</span> <span class="card-count">· 43 部 · 五部尼柯耶</span></h2>
+      </header>
+      <div class="nikayas">
+
+        <div class="nk" data-od-id="nikaya-digha">
+          <p class="nk-head">长部 · 3 部</p>
+          <ul class="books book-stack">
+            <li><button class="book book-stack" data-od-id="digha-silakkhandha"><span class="zh">戒蕴品</span><span class="pi">sīlakkhandhavaggapāḷi</span></button></li>
+            <li><button class="book book-stack" data-od-id="digha-mahavagga"><span class="zh">大品</span><span class="pi">mahāvaggapāḷi</span></button></li>
+            <li><button class="book book-stack" data-od-id="digha-pathika"><span class="zh">波梨品</span><span class="pi">pāthikavaggapāḷi</span></button></li>
+          </ul>
+        </div>
+
+        <div class="nk" data-od-id="nikaya-majjhima">
+          <p class="nk-head">中部 · 3 部</p>
+          <ul class="books book-stack">
+            <li><button class="book book-stack" data-od-id="majjhima-mulapannasa"><span class="zh">根本五十经</span><span class="pi">mūlapaṇṇāsapāḷi</span></button></li>
+            <li><button class="book book-stack" data-od-id="majjhima-majjhimapannasa"><span class="zh">中分五十经</span><span class="pi">majjhimapaṇṇāsapāḷi</span></button></li>
+            <li><button class="book book-stack" data-od-id="majjhima-uparipannasa"><span class="zh">后分五十经</span><span class="pi">uparipaṇṇāsapāḷi</span></button></li>
+          </ul>
+        </div>
+
+        <div class="nk" data-od-id="nikaya-samyutta">
+          <p class="nk-head">相应部 · 5 部</p>
+          <ul class="books book-stack">
+            <li><button class="book book-stack" data-od-id="samyutta-sagatha"><span class="zh">有偈品相应</span><span class="pi">sagāthāvaggasaṃyuttapāḷi</span></button></li>
+            <li><button class="book book-stack" data-od-id="samyutta-nidana"><span class="zh">因缘品相应</span><span class="pi">nidānavaggasaṃyuttapāḷi</span></button></li>
+            <li><button class="book book-stack" data-od-id="samyutta-khandha"><span class="zh">蕴品相应</span><span class="pi">khandhavaggasaṃyuttapāḷi</span></button></li>
+            <li><button class="book book-stack" data-od-id="samyutta-salayatana"><span class="zh">六处品相应</span><span class="pi">saḷāyatanavaggasaṃyuttapāḷi</span></button></li>
+            <li><button class="book book-stack" data-od-id="samyutta-mahavagga"><span class="zh">大品相应</span><span class="pi">mahāvaggasaṃyuttapāḷi</span></button></li>
+          </ul>
+        </div>
+
+        <div class="nk" data-od-id="nikaya-anguttara">
+          <p class="nk-head">增支部 · 11 部</p>
+          <ul class="books book-stack">
+            <li><button class="book book-stack" data-od-id="anguttara-1"><span class="zh">一集</span><span class="pi">ekakanipātapāḷi</span></button></li>
+            <li><button class="book book-stack" data-od-id="anguttara-2"><span class="zh">二集</span><span class="pi">dukanipātapāḷi</span></button></li>
+            <li><button class="book book-stack" data-od-id="anguttara-3"><span class="zh">三集</span><span class="pi">tikanipātapāḷi</span></button></li>
+            <li><button class="book book-stack" data-od-id="anguttara-4"><span class="zh">四集</span><span class="pi">catukkanipātapāḷi</span></button></li>
+          </ul>
+          <button class="more" data-od-id="more-anguttara">还有 7 部<span class="caret">▾</span></button>
+        </div>
+
+        <div class="nk" data-od-id="nikaya-khuddaka">
+          <p class="nk-head">小部 · 21 部</p>
+          <ul class="books book-stack">
+            <li><button class="book book-stack" data-od-id="khuddaka-khuddakapatha"><span class="zh">小诵</span><span class="pi">khuddakapāṭhapāḷi</span></button></li>
+            <li><button class="book book-stack" data-od-id="khuddaka-dhammapada"><span class="zh">法句</span><span class="pi">dhammapadapāḷi</span></button></li>
+            <li><button class="book book-stack" data-od-id="khuddaka-udana"><span class="zh">自说</span><span class="pi">udānapāḷi</span></button></li>
+            <li><button class="book book-stack" data-od-id="khuddaka-itivuttaka"><span class="zh">如是语</span><span class="pi">itivuttakapāḷi</span></button></li>
+          </ul>
+          <button class="more" data-od-id="more-khuddaka">还有 17 部<span class="caret">▾</span></button>
+        </div>
+
+      </div>
+    </article>
+
+  </section>
+
+  <!-- ═══════════ Piece 2 — 左侧目录栏 ═══════════ -->
+  <section class="rail-block" data-od-id="piece-2-rail">
+
+    <aside class="rail" data-od-id="sidebar-rail" aria-label="目录">
+      <header class="rail-head">
+        <p class="eyebrow">三藏 · Tipiṭaka</p>
+        <button class="icon-btn" data-od-id="rail-collapse" aria-label="折叠目录">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor"
+               stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <rect x="1.75" y="2.75" width="12.5" height="10.5" rx="2"/>
+            <path d="M6.25 2.75v10.5"/>
+            <path d="M11 6.5 9 8l2 1.5"/>
+          </svg>
+        </button>
+      </header>
+
+      <div class="rail-body">
+        <nav class="tree" aria-label="藏经层级">
+          <button class="tree-item" data-od-id="tree-root">根本三藏 <span class="t-count">61 部</span></button>
+          <button class="tree-item t-l1" data-od-id="tree-sutta-digha">经藏 · 长部 <span class="t-count">3 部</span></button>
+          <button class="tree-item t-l2 is-current" data-od-id="tree-silakkhandha" aria-current="true">戒蕴品</button>
+          <button class="tree-item t-l2" data-od-id="tree-mahavagga">大品</button>
+          <button class="tree-item t-l2" data-od-id="tree-pathika">波梨品</button>
+        </nav>
+
+        <nav class="contents" aria-label="戒蕴品目录">
+          <button class="c-row c-l1" data-od-id="c-1-brahmajala">1. brahmajālasuttaṃ</button>
+          <button class="c-row c-l2" data-od-id="c-dighanikayo">dīghanikāyo</button>
+          <button class="c-row c-l3 c-current" data-od-id="c-paribbajaka" aria-current="true">paribbājakakathā</button>
+          <button class="c-row c-l3" data-od-id="c-culasila">cūḷasīlaṃ</button>
+          <button class="c-row c-l3" data-od-id="c-majjhimasila">majjhimasīlaṃ</button>
+          <button class="c-row c-l3" data-od-id="c-mahasila">mahāsīlaṃ</button>
+          <button class="c-row c-l3" data-od-id="c-pubbantakappika">pubbantakappikā</button>
+          <button class="c-row c-l3" data-od-id="c-sassatavada">sassatavādo</button>
+          <button class="c-row c-l3" data-od-id="c-ekaccasassatavada">ekaccasassatavādo</button>
+          <button class="c-row c-l3" data-od-id="c-antanantavada">antānantavādo</button>
+          <button class="c-row c-l1" data-od-id="c-2-samannaphala">2. sāmaññaphalasuttaṃ</button>
+        </nav>
+      </div>
+
+      <footer class="rail-foot">
+        <span class="ring">
+          <svg width="48" height="48" viewBox="0 0 48 48" role="img" aria-label="阅读进度 0%">
+            <circle cx="24" cy="24" r="21" fill="none" stroke="#e8e6dc" stroke-width="1.5"/>
+            <text x="24" y="28.5" text-anchor="middle" font-size="12" font-weight="500"
+                  fill="currentColor" font-family="inherit">0%</text>
+          </svg>
+        </span>
+        <span class="foot-label">阅读进度</span>
+      </footer>
+    </aside>
+
+    <div class="type-note" data-od-id="type-scale-note">
+      <p class="note-label">巴利语字号</p>
+
+      <div class="note-group">
+        <p class="note-cap">过小（现状）</p>
+        <ul class="note-rows note-too-small">
+          <li>1. brahmajālasuttaṃ</li>
+          <li>dīghanikāyo</li>
+          <li>paribbājakakathā</li>
+        </ul>
+      </div>
+
+      <div class="note-group">
+        <p class="note-cap">合适</p>
+        <ul class="note-rows note-good">
+          <li>1. brahmajālasuttaṃ</li>
+          <li>dīghanikāyo</li>
+          <li>paribbājakakathā</li>
+        </ul>
+      </div>
+    </div>
+
+  </section>
+
+</main>
+</body>
+</html>

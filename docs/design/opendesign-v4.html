@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>段下注行 · 配色终稿</title>
+<style>
+/* ── tokens ─────────────────────────────────────────────────────
+ * 阅读面仍是 kami：羊皮纸 + 单一墨蓝。下面这一组是「段下注行」
+ * 自己的语义色，全部收在 :root，正文样式里不出现裸 hex。
+ * ─────────────────────────────────────────────────────────────── */
+:root{
+  --bg:#f5f4ed; --surface:#faf9f5; --surface-warm:#e8e6dc;
+  --fg:#141413; --fg-2:#3d3d3a; --muted:#504e49; --meta:#6b6a64;
+  --border:#e8e6dc; --border-soft:#e5e3d8;
+  --accent:#1b365d; --accent-on:#faf9f5; --accent-active:#142a48;
+  --tag-bg-faint:#eef2f7; --tag-bg-soft:#e4ecf5; --tag-bg-base:#d6e1ee;
+
+  --ui:"Helvetica Neue",Helvetica,Arial,"Songti SC","Source Han Serif SC","Noto Serif CJK SC",serif;
+  --pali:"Iowan Old Style",Palatino,Georgia,serif;
+
+  /* 四种归属：三层底 + 一条墨蓝竖规 */
+  --row-word:#eef2f7;        /* 词的洗底：工具自己的记录，墨蓝最淡的一层 */
+  --row-note:#efe7d6;        /* 批的暖纸：我的、随手写的 */
+  --row-note-ring:#ded3bb;   /* 批的 1px 环，把暖纸从羊皮纸上托起来 */
+  --ico-note:#e3d9c2;        /* 批的图表片 */
+  --row-trans:#faf9f5;       /* 译的象牙：我的、已成文的 */
+  --ref-rule:#e0dcd0;        /* 参的发丝线，只做分隔不做标色 */
+  --wash-warm:#dbd5c4;       /* 暖底上的悬停洗色 */
+  --ring-soft:#dcd8cc;
+
+  --shadow:0 4px 24px rgba(0,0,0,.05);
+  --focus:2px solid var(--accent);
+  --ease:cubic-bezier(.2,0,0,1);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--fg);font:400 13px/1.6 var(--ui);-webkit-font-smoothing:antialiased}
+button,textarea{font:inherit;color:inherit}
+button{background:none;border:0;cursor:pointer}
+b,strong{font-weight:600}
+code{font:400 12px/1.6 var(--ui);color:var(--accent)}
+:focus-visible{outline:var(--focus);outline-offset:2px}
+svg{display:block;flex:none}
+
+/* ── 版面 ───────────────────────────────────────────────────── */
+.page{width:1000px;margin:0 auto;padding:52px 56px 72px}
+.eyebrow{font:500 11px/1 var(--ui);letter-spacing:.08em;color:var(--meta);text-transform:uppercase;margin-bottom:26px}
+.canvas{display:grid;grid-template-columns:640px 96px;gap:22px 26px;justify-content:center}
+.para{grid-column:1;font:400 19.5px/1.8 var(--pali);color:var(--fg)}
+.rail{grid-column:2;grid-row:1;align-self:start}
+.stack{grid-column:1}
+
+/* ── 图表片：行的身份由它扛，不靠四种底色 ─────────────────── */
+.ico{display:grid;place-items:center;width:20px;height:20px;border-radius:4px;flex:none;margin-top:6px;color:var(--fg-2)}
+.ico-word{background:var(--tag-bg-soft);color:var(--accent)}
+.ico-note{background:var(--ico-note);color:var(--muted)}
+.ico-trans{background:var(--accent);color:var(--accent-on)}
+.ico-ref{background:transparent;box-shadow:0 0 0 1px var(--ring-soft);color:var(--meta)}
+
+/* ── 行 ─────────────────────────────────────────────────────── */
+.group + .group{margin-top:18px}
+.row + .row{margin-top:8px}
+.row{display:flex;align-items:flex-start;gap:11px;padding:10px 13px;border-radius:4px}
+.body{flex:1;min-width:0}
+
+.row-word{background:var(--row-word)}
+.grp{display:inline-flex;align-items:center;flex-wrap:wrap;gap:6px;margin-right:16px}
+.surf{font:600 13.5px/1.6 var(--pali);color:var(--fg)}
+.chip{display:inline-flex;align-items:center;gap:3px;padding:1px 3px 1px 7px;border-radius:3px;font:500 12px/1.6 var(--ui)}
+.chip-gram{background:var(--surface-warm);color:var(--muted)}
+.chip-mean{background:var(--tag-bg-soft);color:var(--accent)}
+.x{display:grid;place-items:center;width:16px;height:16px;border-radius:2px;color:inherit}
+.chip-gram .x:hover{background:var(--wash-warm);color:var(--fg)}
+.chip-mean .x:hover{background:var(--tag-bg-base);color:var(--accent-active)}
+
+.row-note{background:var(--row-note);box-shadow:0 0 0 1px var(--row-note-ring)}
+.note{flex:1;min-width:0;max-width:48ch;font:400 13.5px/1.75 var(--ui);color:var(--fg-2);transform:rotate(-.3deg);transform-origin:left center}
+.meta{font:400 11.5px/1.6 var(--ui);color:var(--meta);white-space:nowrap;margin-top:5px}
+.x-lg{display:grid;place-items:center;width:22px;height:22px;border-radius:3px;color:var(--meta);margin-top:3px}
+.x-lg:hover{background:var(--wash-warm);color:var(--fg)}
+.pencil{display:grid;place-items:center;width:24px;height:24px;border-radius:3px;color:var(--meta);margin-top:2px}
+.pencil:hover{background:var(--tag-bg-base);color:var(--accent)}
+
+.row-trans{position:relative;background:var(--row-trans);border-radius:3px}
+.row-trans::before{content:"";position:absolute;left:-10px;top:3px;bottom:3px;width:2px;border-radius:2px;background:var(--accent)}
+
+.row-ref{padding:9px 0;margin-left:30px;border-top:1px solid var(--ref-rule)}
+.ref-text{flex:1;min-width:0;font:400 13.5px/1.75 var(--ui);color:var(--fg-2)}
+
+/* ── 编辑态 ─────────────────────────────────────────────────── */
+.editor{flex:1;min-width:0;animation:open 160ms ease both}
+@keyframes open{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:none}}
+textarea{display:block;width:100%;resize:none;border:0;border-radius:3px;padding:7px 9px;background:var(--surface);box-shadow:0 0 0 1px var(--border);font:400 13px/1.65 var(--ui);color:var(--fg)}
+textarea::placeholder{color:var(--meta)}
+.acts{display:flex;align-items:center;gap:8px;margin-top:7px}
+.btn{display:inline-flex;align-items:center;gap:5px;height:26px;padding:0 10px;border-radius:4px;font:500 12px/1 var(--ui)}
+.btn-save{background:var(--accent);color:var(--accent-on);box-shadow:0 0 0 1px var(--accent)}
+.btn-save:hover{background:var(--accent-active);box-shadow:0 0 0 1px var(--accent-active)}
+.btn-cancel{color:var(--muted);box-shadow:0 0 0 1px var(--border)}
+.btn-cancel:hover{background:var(--surface-warm);color:var(--accent)}
+
+/* ── 段边控件 ───────────────────────────────────────────────── */
+.ctl{display:flex;gap:6px}
+.cbtn{display:grid;place-items:center;width:27px;height:27px;border-radius:6px;background:var(--surface);box-shadow:0 0 0 1px var(--border);font:500 12px/1 var(--ui);color:var(--fg-2)}
+.cbtn:hover{background:var(--surface-warm);color:var(--accent)}
+.cbtn[aria-pressed="true"],.cbtn[aria-pressed="true"]:hover{background:var(--accent);color:var(--accent-on);box-shadow:0 0 0 1px var(--accent)}
+.rail-cap{font:400 11.5px/1.5 var(--ui);color:var(--meta);margin-top:10px}
+
+/* ── 规格区 ─────────────────────────────────────────────────── */
+.spec{grid-column:1 / -1;margin-top:46px;padding-top:26px;border-top:1px solid var(--border)}
+.spec-title{font:600 14px/1.3 var(--ui);color:var(--fg)}
+.spec-lede{font:400 12.5px/1.8 var(--ui);color:var(--muted);margin-top:9px;max-width:74ch}
+.states{display:flex;gap:56px;margin-top:16px}
+.state-cap{font:400 11.5px/1.5 var(--ui);color:var(--meta);margin-top:9px}
+
+.swatches{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-top:18px}
+.sw-card{background:var(--surface);border-radius:6px;padding:12px;box-shadow:0 0 0 1px var(--border)}
+.sw-ground{position:relative;height:38px;border-radius:3px;box-shadow:0 0 0 1px var(--border)}
+.sw-word{background:var(--row-word)}
+.sw-note{background:var(--row-note);box-shadow:0 0 0 1px var(--row-note-ring)}
+.sw-trans{background:var(--row-trans)}
+.sw-trans::before{content:"";position:absolute;left:-7px;top:4px;bottom:4px;width:2px;border-radius:2px;background:var(--accent)}
+.sw-ref{background:transparent;border-top:1px solid var(--ref-rule);border-radius:0}
+.sw-name{font:600 13px/1.4 var(--ui);color:var(--fg);margin-top:11px}
+.sw-name span{font:400 12px/1.4 var(--ui);color:var(--meta);margin-left:6px}
+.sw-note-text{font:400 11.5px/1.7 var(--ui);color:var(--muted);margin-top:5px}
+.sw-note-text code{font-size:11.5px}
+
+.sw-chips{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:14px;background:var(--surface);border-radius:6px;padding:12px;box-shadow:0 0 0 1px var(--border)}
+.sw-chips p{flex:1;min-width:240px;font:400 11.5px/1.7 var(--ui);color:var(--muted)}
+</style>
+</head>
+<body>
+<main class="page">
+  <p class="eyebrow">Pāḷi Reader · 段下注行</p>
+
+  <div class="canvas">
+
+    <p class="para" data-od-id="pali-paragraph">Tatra kho bhagavā pañcavaggiye bhikkhū āmantesi — anuttaraṃ dhammacakkaṃ pavattitaṃ, appaṭivattiyaṃ samaṇena vā brāhmaṇena vā devena vā mārena vā brahmunā vā kenaci vā lokasmiṃ.</p>
+
+    <div class="rail" data-od-id="margin-controls">
+      <div class="ctl" role="group" aria-label="段边控件">
+        <button class="cbtn" aria-pressed="true" data-od-id="ctl-zh">中</button>
+        <button class="cbtn" aria-pressed="true" data-od-id="ctl-en">英</button>
+        <button class="cbtn" aria-pressed="false" aria-label="批注" data-od-id="ctl-note">
+          <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="1.9" y="2.6" width="12.2" height="9.2" rx="2"/><path d="M5.4 11.8v2.3l2.5-2.3"/><path d="M8 5.1v4.2M5.9 7.2h4.2"/></svg>
+        </button>
+      </div>
+      <p class="rail-cap">贴在正文外侧，不占正文宽度。</p>
+    </div>
+
+    <div class="stack" data-od-id="annotation-rows">
+
+      <!-- 1 · 词 -->
+      <div class="group" data-od-id="row-group-word">
+        <div class="row row-word" data-od-id="row-word">
+          <span class="ico ico-word" aria-hidden="true">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><path d="M12 6.6C10.2 5.3 7.6 4.9 4.6 5v12.1c3-.1 5.6.3 7.4 1.6 1.8-1.3 4.4-1.7 7.4-1.6V5c-3-.1-5.6.3-7.4 1.6Z"/><path d="M12 6.6v12.1"/></svg>
+          </span>
+          <div class="body">
+            <span class="grp" data-od-id="word-group-dhammacakka">
+              <b class="surf">dhammacakkaṃ</b>
+              <span class="chip chip-gram">acc sg<button class="x" aria-label="移除 acc sg"><svg width="9" height="9" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"><path d="M1.4 1.4 8.6 8.6M8.6 1.4 1.4 8.6"/></svg></button></span>
+              <span class="chip chip-mean">法轮<button class="x" aria-label="移除 法轮"><svg width="9" height="9" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"><path d="M1.4 1.4 8.6 8.6M8.6 1.4 1.4 8.6"/></svg></button></span>
+              <span class="chip chip-mean">教说<button class="x" aria-label="移除 教说"><svg width="9" height="9" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"><path d="M1.4 1.4 8.6 8.6M8.6 1.4 1.4 8.6"/></svg></button></span>
+            </span>
+            <span class="grp" data-od-id="word-group-appativattiya">
+              <b class="surf">appaṭivattiyaṃ</b>
+              <span class="chip chip-gram">nom sg<button class="x" aria-label="移除 nom sg"><svg width="9" height="9" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"><path d="M1.4 1.4 8.6 8.6M8.6 1.4 1.4 8.6"/></svg></button></span>
+              <span class="chip chip-mean">不可逆转<button class="x" aria-label="移除 不可逆转"><svg width="9" height="9" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"><path d="M1.4 1.4 8.6 8.6M8.6 1.4 1.4 8.6"/></svg></button></span>
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <!-- 2 · 批 -->
+      <div class="group" data-od-id="row-group-note">
+        <div class="row row-note" data-od-id="row-note-saved">
+          <span class="ico ico-note" aria-hidden="true">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><rect x="2.8" y="3.9" width="18.4" height="13.6" rx="2.6"/><path d="M8.1 17.5v3.4l3.7-3.4"/><path d="M12 7.9v6.1M8.95 10.95h6.1"/></svg>
+          </span>
+          <p class="note" data-od-id="note-text">这句是初转法轮的定型句。法轮的比喻早于佛教——灌顶礼上本来就有，世尊是借用了它。</p>
+          <span class="meta">3 分钟前</span>
+          <button class="x-lg" aria-label="删除批注" data-od-id="note-delete">
+            <svg width="11" height="11" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"><path d="M1.8 1.8 10.2 10.2M10.2 1.8 1.8 10.2"/></svg>
+          </button>
+        </div>
+        <div class="row row-note" data-od-id="row-note-editing">
+          <span class="ico ico-note" aria-hidden="true">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><rect x="2.8" y="3.9" width="18.4" height="13.6" rx="2.6"/><path d="M8.1 17.5v3.4l3.7-3.4"/><path d="M12 7.9v6.1M8.95 10.95h6.1"/></svg>
+          </span>
+          <div class="editor">
+            <textarea rows="2" placeholder="写下你的批注…" aria-label="批注"></textarea>
+            <div class="acts">
+              <button class="btn btn-save" data-od-id="note-save">
+                <svg width="12" height="12" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m3.5 10.6 4.2 4.2 8.8-9.4"/></svg>
+                保存
+              </button>
+              <button class="btn btn-cancel" data-od-id="note-cancel">取消</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 3 · 译 -->
+      <div class="group" data-od-id="row-group-translation">
+        <div class="row row-trans" data-od-id="row-translation-saved">
+          <span class="ico ico-trans" aria-hidden="true">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><path d="M16.4 4.2 19.8 7.6 9.4 18H6v-3.4L16.4 4.2Z"/><path d="M13.9 6.7 17.3 10.1"/></svg>
+          </span>
+          <p class="ref-text" data-od-id="translation-text">世尊于鹿野苑为五比丘转起无上法轮；此法轮不可为沙门、婆罗门、天、魔、梵或世间任何人所逆转。</p>
+          <span class="meta">已保存 · 14:32</span>
+          <button class="pencil" aria-label="编辑译文" data-od-id="translation-edit">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><path d="M16.4 4.2 19.8 7.6 9.4 18H6v-3.4L16.4 4.2Z"/><path d="M13.9 6.7 17.3 10.1"/></svg>
+          </button>
+        </div>
+        <div class="row row-trans" data-od-id="row-translation-editing">
+          <span class="ico ico-trans" aria-hidden="true">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><path d="M16.4 4.2 19.8 7.6 9.4 18H6v-3.4L16.4 4.2Z"/><path d="M13.9 6.7 17.3 10.1"/></svg>
+          </span>
+          <div class="editor">
+            <textarea rows="2" placeholder="在此填写你的翻译…" aria-label="译文"></textarea>
+            <div class="acts">
+              <button class="btn btn-save" data-od-id="translation-save">
+                <svg width="12" height="12" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m3.5 10.6 4.2 4.2 8.8-9.4"/></svg>
+                保存
+              </button>
+              <button class="btn btn-cancel" data-od-id="translation-cancel">取消</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 4 · 参 -->
+      <div class="group" data-od-id="row-group-reference">
+        <div class="row row-ref" data-od-id="row-ref-zh">
+          <span class="ico ico-ref" aria-hidden="true">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><path d="M2.6 5.4h8.1"/><path d="M6.6 3.6v1.8"/><path d="M9.9 5.4c0 4.2-2.7 6.9-7 8"/><path d="M4.4 9.2c1.3 2.1 3.1 3.6 5.3 4.4"/><path d="M12.6 20.4 16.1 12l3.5 8.4"/><path d="M13.9 17.2h4.4"/></svg>
+          </span>
+          <p class="ref-text" data-od-id="ref-zh-text">世尊在鹿野苑为五位比丘转起无上法轮，此轮不为沙门、婆罗门、天、魔、梵及世间任何人所逆转。</p>
+          <span class="meta">ePitaka 中译</span>
+        </div>
+        <div class="row row-ref" data-od-id="row-ref-en">
+          <span class="ico ico-ref" aria-hidden="true">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><path d="M2.6 5.4h8.1"/><path d="M6.6 3.6v1.8"/><path d="M9.9 5.4c0 4.2-2.7 6.9-7 8"/><path d="M4.4 9.2c1.3 2.1 3.1 3.6 5.3 4.4"/><path d="M12.6 20.4 16.1 12l3.5 8.4"/><path d="M13.9 17.2h4.4"/></svg>
+          </span>
+          <p class="ref-text" data-od-id="ref-en-text">At the Deer Park the Blessed One set rolling the unsurpassed wheel of Dhamma — a wheel that cannot be turned back by any ascetic or brahmin, by any deva, Māra, Brahmā, or anyone in the world.</p>
+          <span class="meta">ePitaka 英译</span>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- 段边控件两态 -->
+    <section class="spec" data-od-id="margin-controls-states">
+      <h2 class="spec-title">段边控件 · 两态</h2>
+      <p class="spec-lede">中 / 英 管下方「参」行是否露出，对话框图标管「批」。三枚都是 27×27、1px 环、象牙底；只有按下才换成墨蓝实心 + 象牙文字。</p>
+      <div class="states">
+        <div class="state" data-od-id="state-default">
+          <div class="ctl">
+            <button class="cbtn" aria-pressed="false">中</button>
+            <button class="cbtn" aria-pressed="false">英</button>
+            <button class="cbtn" aria-pressed="false" aria-label="批注"><svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="1.9" y="2.6" width="12.2" height="9.2" rx="2"/><path d="M5.4 11.8v2.3l2.5-2.3"/><path d="M8 5.1v4.2M5.9 7.2h4.2"/></svg></button>
+          </div>
+          <p class="state-cap">默认</p>
+        </div>
+        <div class="state" data-od-id="state-pressed">
+          <div class="ctl">
+            <button class="cbtn" aria-pressed="true">中</button>
+            <button class="cbtn" aria-pressed="false">英</button>
+            <button class="cbtn" aria-pressed="false" aria-label="批注"><svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="1.9" y="2.6" width="12.2" height="9.2" rx="2"/><path d="M5.4 11.8v2.3l2.5-2.3"/><path d="M8 5.1v4.2M5.9 7.2h4.2"/></svg></button>
+          </div>
+          <p class="state-cap">按下 · 中</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- 色板 -->
+    <section class="spec" data-od-id="palette-final">
+      <h2 class="spec-title">终稿色板</h2>
+      <p class="spec-lede">旧稿的问题不在配色太少，而在四种浅底彼此只差两三个明度点：真正在分开四行的其实是四条 2px 规矩，而灰规与蓝规在 2px 上并没有「一眼」的差别；同时 <code>#eef2f7</code> 与 <code>#cfdcec</code> 是同一个蓝的两个明度，于是「词」和「参」成了亲戚——可它们本该离得最远。新方案按归属分三层底，行身份交给 20×20 的图表片去扛，全页只剩一条墨蓝竖规。另外「参」不再压灰：别人的字也要读得清，安静靠的是不铺底、缩进与发丝线。</p>
+      <div class="swatches">
+        <div class="sw-card" data-od-id="swatch-word">
+          <div class="sw-ground sw-word"></div>
+          <p class="sw-name">词 <span>词下记录</span></p>
+          <p class="sw-note-text">墨蓝最淡的一层洗底，无规矩。工具替经文记下的读音与义项，不与人抢位置。</p>
+        </div>
+        <div class="sw-card" data-od-id="swatch-note">
+          <div class="sw-ground sw-note"></div>
+          <p class="sw-name">批 <span>我的批注</span></p>
+          <p class="sw-note-text">暖纸底 + 1px 暖灰环，无规矩，文字略向右倾。我的、随手写的，读起来像页边的铅笔字而不是引文。</p>
+        </div>
+        <div class="sw-card" data-od-id="swatch-translation">
+          <div class="sw-ground sw-trans"></div>
+          <p class="sw-name">译 <span>我的译文</span></p>
+          <p class="sw-note-text">象牙底比页面抬高一格，全页唯一一条墨蓝竖规立在卡片外的天头里。我的、已成文的，所以由墨蓝来定调。</p>
+        </div>
+        <div class="sw-card" data-od-id="swatch-reference">
+          <div class="sw-ground sw-ref"></div>
+          <p class="sw-name">参 <span>他人译文</span></p>
+          <p class="sw-note-text">不铺底，靠 30px 缩进与上下发丝线成段，正文用 <code>#3d3d3a</code> 满对比。别人的字，安静来自结构与署名，不来自压低对比。</p>
+        </div>
+      </div>
+      <div class="sw-chips" data-od-id="swatch-chips">
+        <span class="chip chip-gram">nom sg<button class="x" aria-label="移除"><svg width="9" height="9" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"><path d="M1.4 1.4 8.6 8.6M8.6 1.4 1.4 8.6"/></svg></button></span>
+        <span class="chip chip-mean">教说<button class="x" aria-label="移除"><svg width="9" height="9" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"><path d="M1.4 1.4 8.6 8.6M8.6 1.4 1.4 8.6"/></svg></button></span>
+        <p>同一枚墨蓝的两种用法：<b>语法</b>走暖砂底 + 橄榄文字（无色相），<b>义项</b>走淡墨底 + 墨蓝文字。不加第二种彩色，靠底色的冷暖与文字的有无彩色分开。</p>
+      </div>
+    </section>
+
+    <section class="spec" data-od-id="motion-note">
+      <h2 class="spec-title">动效</h2>
+      <p class="spec-lede">打开／收起编辑器统一为 <code>opacity</code> + <code>translateY(-4px)</code>，160ms ease，不做高度动画；行的底色不动，避免整段文字跟着跳。</p>
+    </section>
+
+  </div>
+</main>
+</body>
+</html>
