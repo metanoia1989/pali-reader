@@ -1,0 +1,11 @@
+# Installed Electron binary and its download cache
+node_modules/
+.cache/
+
+# Proof artefacts from `npm run measure` / `npm run offline-demo`
+proof/
+
+# A copy of ../frontend/dist, only present if someone ran `npm run pack`
+dist/
+
+.DS_Store

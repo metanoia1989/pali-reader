@@ -1,0 +1,145 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>连不上后端 · 巴利三藏阅读器</title>
+    <style>
+      /* Same tokens as src/assets/base.css, so the failure state does not look
+         like a different product. Ink blue is still the only colour, and the
+         UI stack is sans-serif with the CJK families last (rule 12): the Latin
+         family has no Chinese glyphs, so Chinese falls through to PingFang. */
+      :root {
+        --bg: #f5f4ed;
+        --card: #faf9f5;
+        --fg: #1c1b18;
+        --fg-2: #4a4741;
+        --meta: #8a857a;
+        --line: #e3e0d6;
+        --ink: #1b365d;
+        --ui: "Helvetica Neue", Helvetica, Arial, "PingFang SC", "Hiragino Sans GB",
+          "Microsoft YaHei", "Noto Sans CJK SC", sans-serif;
+        --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      }
+      * { box-sizing: border-box; }
+      html, body { height: 100%; }
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--fg);
+        font-family: var(--ui);
+        font-size: 14px;
+        line-height: 1.7;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 40px 24px;
+      }
+      main {
+        width: 100%;
+        max-width: 640px;
+        background: var(--card);
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        box-shadow: 0 4px 24px rgba(0, 0, 0, 0.05);
+        padding: 32px 36px 28px;
+      }
+      .eyebrow {
+        margin: 0 0 10px;
+        color: var(--meta);
+        font-size: 12px;
+        letter-spacing: 0.08em;
+      }
+      h1 {
+        margin: 0 0 14px;
+        font-size: 24px;
+        font-weight: 500;
+        letter-spacing: 0.01em;
+      }
+      p { margin: 0 0 14px; color: var(--fg-2); }
+      dl {
+        margin: 20px 0;
+        border-top: 1px solid var(--line);
+        border-bottom: 1px solid var(--line);
+        padding: 14px 0;
+      }
+      dl > div { display: flex; gap: 14px; align-items: baseline; padding: 3px 0; }
+      dt { flex: 0 0 84px; color: var(--meta); font-size: 12.5px; }
+      dd { margin: 0; font-family: var(--mono); font-size: 12.5px; word-break: break-all; }
+      dd.reason { font-family: var(--ui); color: #8a3d2f; }
+      .actions { display: flex; align-items: center; gap: 14px; margin-top: 22px; }
+      a.btn {
+        display: inline-block;
+        padding: 8px 20px;
+        border-radius: 6px;
+        background: var(--ink);
+        color: #fff;
+        text-decoration: none;
+        font-size: 14px;
+        border: 1px solid var(--ink);
+      }
+      a.btn:hover { opacity: 0.9; }
+      .hint { color: var(--meta); font-size: 12.5px; }
+      details { margin-top: 22px; border-top: 1px solid var(--line); padding-top: 16px; }
+      summary { cursor: pointer; color: var(--ink); font-size: 13px; }
+      details p, details li { font-size: 12.5px; color: var(--fg-2); }
+      details ol { padding-left: 20px; margin: 10px 0 0; }
+      code {
+        font-family: var(--mono);
+        background: #efece2;
+        border-radius: 4px;
+        padding: 1px 5px;
+        font-size: 12px;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <p class="eyebrow">巴利三藏阅读器 · 桌面版</p>
+      <h1>连不上后端</h1>
+      <p>
+        界面已经装在本地了，缺的只是经文数据：下面这个地址没有应答。服务器在局域网上，
+        有时会不可达——接上网络或打开 SSH 隧道后会自动恢复。
+      </p>
+      <dl>
+        <div><dt>后端地址</dt><dd>{{API_BASE}}</dd></div>
+        <div><dt>地址来源</dt><dd>{{CONFIG_SOURCE}}</dd></div>
+        <div><dt>失败原因</dt><dd class="reason">{{ERROR}}</dd></div>
+      </dl>
+      <div class="actions">
+        <a class="btn" href="/__desktop/retry" id="retry">重试</a>
+        <span class="hint" id="hint">每 5 秒自动重试一次…</span>
+      </div>
+      <details>
+        <summary>怎么换一个后端地址</summary>
+        <ol>
+          <li>
+            改 <code>{{CONFIG_PATH}}</code> 里的 <code>apiBase</code>，重启应用生效。
+          </li>
+          <li>
+            或者临时用环境变量：
+            <code>PALI_API=http://localhost:8099 npm start</code>（优先级更高）。
+          </li>
+          <li>
+            走 SSH 隧道时地址形如 <code>{{TUNNEL}}</code>，前提是隧道已经建立。
+          </li>
+        </ol>
+      </details>
+    </main>
+    <script>
+      // Recover on its own: the common cause is "the LAN is not up yet", and the
+      // reader should not have to babysit a button. The manual button stays for
+      // the impatient / the case where the probe is slower than the human.
+      const hint = document.getElementById('hint')
+      let left = 5
+      setInterval(() => {
+        left -= 1
+        if (left <= 0) {
+          location.href = '/__desktop/retry'
+          return
+        }
+        hint.textContent = left + ' 秒后自动重试…'
+      }, 1000)
+    </script>
+  </body>
+</html>
