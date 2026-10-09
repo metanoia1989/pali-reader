@@ -5,6 +5,7 @@ import { computed, onMounted, onBeforeUnmount, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { BookMarked, BookOpen, LogOut, Menu, Search, Settings2, User } from 'lucide-vue-next'
 import { useAuth } from '../store/auth'
+import { api, getToken } from '../api'
 import { useSettings } from '../store/settings'
 import SettingsPanel from './SettingsPanel.vue'
 import BrandMark from './BrandMark.vue'
@@ -24,6 +25,8 @@ const auth = useAuth()
 const S = useSettings()
 const q = ref('')
 const menu = ref(false)
+const exporting = ref(false)
+const exportError = ref('')
 const searchEl = ref(null)
 
 function submit() {
@@ -41,6 +44,36 @@ function onKey(e) {
 }
 onMounted(() => window.addEventListener('keydown', onKey))
 onBeforeUnmount(() => window.removeEventListener('keydown', onKey))
+
+// The export used to be an ordinary <a href>. That cannot work: this app
+// authenticates with an Authorization: Bearer header, and a browser navigation
+// sends no such header — so the request arrived anonymous and the server
+// answered 401, which the reader saw as 「请先登录」 while signed in.
+// Fetching it lets the token travel, and the file is saved from the response.
+async function exportData() {
+  if (exporting.value) return
+  exporting.value = true
+  exportError.value = ''
+  try {
+    const res = await fetch(api.exportUrl, { headers: { Authorization: 'Bearer ' + getToken() } })
+    if (!res.ok) throw new Error(res.status === 401 ? '登录已失效，请重新登录' : '导出失败（' + res.status + '）')
+    const blob = await res.blob()
+    // The server names the file; fall back to a date if it does not.
+    const named = /filename="?([^";]+)"?/.exec(res.headers.get('content-disposition') || '')
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = named ? named[1] : 'pali-reader-' + new Date().toISOString().slice(0, 10) + '.json'
+    document.body.appendChild(a)
+    a.click()
+    a.remove()
+    URL.revokeObjectURL(url)
+  } catch (e) {
+    exportError.value = e.message || '导出失败'
+  } finally {
+    exporting.value = false
+  }
+}
 
 async function signOut() {
   menu.value = false
@@ -125,9 +158,10 @@ onBeforeUnmount(() => window.removeEventListener('resize', onResize))
             <div style="font-size: 11.5px; color: var(--meta)">{{ auth.user?.email }}</div>
           </div>
           <router-link to="/vocab" class="menu-item"><BookMarked :size="15" />生词本</router-link>
-          <a class="menu-item" :href="'/api/work/export'" target="_blank" rel="noopener">
-            <Settings2 :size="15" />导出我的数据
-          </a>
+          <button class="menu-item" :disabled="exporting" @click="exportData">
+            <Settings2 :size="15" />{{ exporting ? '正在导出…' : '导出我的数据' }}
+          </button>
+          <p v-if="exportError" class="menu-note">{{ exportError }}</p>
           <button class="menu-item" @click="signOut"><LogOut :size="15" />退出登录</button>
         </div>
       </template>
@@ -173,6 +207,15 @@ onBeforeUnmount(() => window.removeEventListener('resize', onResize))
   padding: 8px 10px 10px;
   border-bottom: 1px solid var(--border-soft);
   margin-bottom: 4px;
+}
+/* A one-line report inside the menu. This is the only place the reader is
+   looking when they press 导出, so it is where the answer belongs. */
+.menu-note {
+  margin: 4px 0 0;
+  padding: 6px 12px 0;
+  border-top: 1px solid var(--border-soft);
+  font-size: 12px;
+  color: var(--accent);
 }
 .menu-item {
   display: flex;
