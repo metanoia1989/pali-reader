@@ -606,12 +606,14 @@ function bare(p) {
   color: var(--meta);
   transition: background var(--fast), border-color var(--fast), color var(--fast);
 }
+/* Hover and focus are both the underline, at two weights. Neither fills the
+   box: a wash behind it made the panel look like it had switched into a form,
+   and this is a reading surface with a lookup on it, not the other way round. */
 .q:hover {
-  background: var(--surface-warm);
+  background: transparent;
+  border-bottom-color: var(--border-strong);
   color: var(--fg-2);
 }
-/* Focus is the underline, not a filled field. A wash behind the whole box made
-   the panel look like it had switched into a form. */
 .q:focus-within {
   background: transparent;
   border-bottom-color: var(--accent);
