@@ -846,8 +846,10 @@ function bare(p) {
 }
 
 /* 词条 */
+/* Square, like the tab bar. Without a border or a background of its own there
+   is nothing for a radius to round — an entry is a row in the panel, not a card
+   sitting on it. */
 .entry {
-  border-radius: var(--radius-md);
   line-height: 1.4;
   overflow: hidden;
 }

@@ -804,8 +804,11 @@ const progress = computed(() => {
   align-items: center;
   justify-content: center;
   gap: 5px;
-  padding: 5px 0;
-  border-radius: var(--radius-sm);
+  /* Square, and a little taller than a chip. The tint now runs to the edges of
+     its half — two halves of one control — so rounding it would round a shape
+     whose whole job is to look like half of a bar. */
+  padding: 9px 0;
+  border-radius: 0;
   font-size: 12.5px;
   color: var(--muted);
   transition: background var(--fast), color var(--fast);
