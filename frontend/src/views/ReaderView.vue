@@ -729,7 +729,8 @@ const progress = computed(() => {
             }"
             @click="goto(t.seq)"
           >
-            {{ t.name }}
+            <span class="tn">{{ t.name }}</span>
+            <span v-if="R.tocRefFor(t.seq)" class="tref">{{ R.tocRefFor(t.seq) }}</span>
           </button>
         </div>
       </aside>
