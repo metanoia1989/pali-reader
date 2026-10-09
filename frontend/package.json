@@ -1,0 +1,23 @@
+{
+  "name": "pali-reader-frontend",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host",
+    "build": "vite build",
+    "preview": "vite preview --host",
+    "check:render": "node tests/check-render.mjs",
+    "check": "node tests/check-components.mjs && node tests/check-render.mjs"
+  },
+  "dependencies": {
+    "lucide-vue-next": "^0.451.0",
+    "pinia": "^2.2.6",
+    "vue": "^3.5.12",
+    "vue-router": "^4.4.5"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-vue": "^5.1.4",
+    "vite": "^5.4.10"
+  }
+}

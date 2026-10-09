@@ -1,0 +1,1518 @@
+/* ==========================================================================
+   巴利三藏阅读器 — visual foundation
+   --------------------------------------------------------------------------
+   Built on the kami (紙 / 纸) design system: warm parchment canvas, a single
+   ink-blue accent, serif carries hierarchy, no italic anywhere, depth from
+   1px rings and one whisper shadow.
+
+   Two departures from a print-first reading of kami, both deliberate:
+   the reader is an application, so it needs real button and popover states;
+   and it is read on a phone, so the touch targets are sized for a thumb.
+   Neither introduces a second accent colour.
+   ========================================================================== */
+
+:root {
+  /* Brand — the only chromatic colour in the system. */
+  --accent: #1b365d;
+  --accent-light: #2d5a8a;
+  --accent-active: #142a48;
+
+  /* Surfaces. The page is never white. */
+  --bg: #f5f4ed;
+  --surface: #faf9f5;
+  --surface-warm: #e8e6dc;
+  --surface-sunk: #f0efe7;
+
+  /* Text: four levels, all warm, no fifth. */
+  --fg: #141413;
+  --fg-2: #3d3d3a;
+  --muted: #504e49;
+  --meta: #6b6a64;
+
+  --border: #e8e6dc;
+  --border-soft: #e5e3d8;
+  --border-strong: #d8d5c8;
+
+  /* Semantic, kept desaturated so they read as variants of the ink. */
+  --ok: #4a6b3a;
+  --warn: #8a6b1f;
+  --danger: #8a3a30;
+
+  /* Tag fills: solid hex pre-blended over parchment, never rgba. */
+  /* ---- dictionary panel -------------------------------------------------
+     The panel is a tool, so it gets one thing the reading surface does not:
+     targeted highlighting. Everything else stays in the same ink-blue and
+     parchment as the rest of the application — a panel that reinvents its own
+     palette beside the text it is explaining reads as a different product.
+
+     What is highlighted, and why only this:
+       matched   the ONE declension form that produced the word the reader
+                 tapped. A cell holds three or four forms; washing the cell
+                 says "one of these", and the question is which.
+       split     a deconstruction, washed, because the whole block is one
+                 statement about how a word comes apart.
+     Everything else is carried by weight and rule, not by colour.
+  */
+  --dict-bg: var(--bg);
+  --dict-surface: var(--surface);
+  --dict-head: var(--surface-warm);
+  --dict-rule: var(--border);
+  --dict-lemma: var(--fg);
+  --dict-num: var(--meta);
+  --dict-click: var(--accent);
+  --dict-click-hi: var(--accent-active);
+  --dict-split-bg: var(--tag-faint);
+  --dict-split-rule: #cfdcec;
+  --dict-comp-bg: var(--tag-faint);
+  --dict-comp-rule: #cfdcec;
+  --dict-comp-ink: var(--accent);
+  --dict-th-bg: var(--surface-warm);
+  --dict-th-ink: var(--muted-strong, var(--fg-2));
+  --dict-mark-bg: #fde68a;
+  --dict-mark-ink: #92400e;
+  --dict-label: var(--meta);
+
+  /* ---- the rows under a paragraph ---------------------------------------
+     Four kinds of claim can sit under one paragraph, and the reader has to
+     tell them apart while scanning with only one chromatic colour to do it.
+
+     The first attempt separated them with four pale grounds and four 2px left
+     rules, and it failed for a reason worth recording: at 2px a warm grey
+     (#c9c2ae) and a deep blue (#1b365d) both read as "a short dark line", so
+     批 and 译 looked like one thing printed twice — and their grounds sat two
+     or three lightness points off the page, so the ground was doing no work
+     either.
+
+     What works is fewer levers, pulled harder. Ownership decides the ground —
+     the tool's own record, my scribble, my finished sentence — and the row's
+     identity is carried by its icon chip. There is exactly ONE accent rule on
+     the page, standing in the margin beside 译.
+
+       词  palest ink wash        the tool's record; chips do the talking
+       批  warm paper + 1px ring  mine, and written by hand in the margin
+       译  ivory, ink-blue rule   mine, and finished — the only accent rule
+       参  no ground, hairline    not mine; set quieter by structure and
+                                  attribution, never by dimming the text
+  */
+  --row-word: #eef2f7;
+  --row-note: #efe7d6;
+  --row-note-ring: #ded3bb;
+  --ico-note: #e3d9c2;
+  --row-trans: #faf9f5;
+  --ref-rule: #e0dcd0;
+  --wash-warm: #dbd5c4;
+  --ring-soft: #dcd8cc;
+  --chip-gram-bg: #e8e6dc;
+  --chip-gram-ink: #504e49;
+  --chip-mean-bg: #e4ecf5;
+  --chip-mean-ink: #1b365d;
+
+  --tag-faint: #eef2f7;
+  --tag-soft: #e4ecf5;
+  --tag-base: #d6e1ee;
+
+  /* Type. The interface is sans in BOTH scripts.
+     Latin first, then a Han sans behind it — and the order matters: Helvetica
+     has no CJK glyphs, so Han falls through to PingFang rather than being
+     dragged into a Latin face. A song face was tried here and rejected: at
+     11–15px, in a chip or a contents row, it reads as sharp and cramped. */
+  --ui: "Helvetica Neue", Helvetica, Arial, "PingFang SC", "Hiragino Sans GB",
+    "Microsoft YaHei", "Noto Sans CJK SC", sans-serif;
+  /* One definition, and --ui is the one place to change it. There used to be a
+     second, Songti-first --serif behind an html[lang^="zh"] rule; it silently
+     won, so body text resolved Han first and every Pāḷi word that had not opted
+     into --sans was drawn by a CJK serif. */
+  --sans: var(--ui);
+  --serif: var(--ui);
+  /* The reading area's face, and nothing else's. Only .seg-pali and
+     .seg-heading use it — the canon's own text at 19.5px across a page, which
+     is exactly the setting a serif was drawn for.
+     Iowan Old Style is an old-style serif that ships with macOS and iOS: it
+     holds up over long stretches of extended Latin and its diacritics —
+     ā ī ū ṭ ḍ ṇ ḷ ṅ ñ ṃ — sit properly on the letters instead of floating.
+     Deliberately a system stack, no webfont: the reading surface should not
+     wait on a network request, and Palatino covers Windows and Linux well. */
+  --pali: "Iowan Old Style", "Palatino Linotype", Palatino, "Book Antiqua",
+    Georgia, "Times New Roman", serif;
+  --mono: "JetBrains Mono", "SF Mono", Menlo, Consolas, "Songti SC", monospace;
+
+  --radius-xs: 2px;
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+
+  --ring: 0 0 0 1px var(--border);
+  --ring-accent: 0 0 0 1px var(--accent);
+  --whisper: 0 4px 24px rgba(0, 0, 0, 0.05);
+
+  --fast: 150ms cubic-bezier(0.2, 0, 0, 1);
+  --base: 200ms cubic-bezier(0.2, 0, 0, 1);
+
+  --topbar-h: 56px;
+  --rail-w: 268px;
+  /* The two rails are sized as a pair. The left is the narrower of the two and
+     the right the wider, but close enough that the reading column sits between
+     two columns of similar weight rather than between a wide one and a narrow
+     one. Both hold the same kind of thing — a list of Pāḷi names at 15.5px with
+     a secondary line under it — so both need roughly the same room. */
+  --toc-w: 340px;
+  --panel-w: 408px;
+
+  /* Text scale.
+     One knob, multiplied through every size that carries reading content —
+     the source text, the glosses, the translations, the dictionary panel. The
+     chrome (buttons, chips, gutters) is deliberately left out: scaling it too
+     makes the interface wobble without helping anyone read. The reader sets
+     this from 阅读设置 and it persists. */
+  --scale: 1;
+  --fs-pali: calc(19.5px * var(--scale));
+  --fs-read: calc(14px * var(--scale));
+  --fs-read-sm: calc(12.5px * var(--scale));
+  --fs-panel: calc(13.5px * var(--scale));
+  --fs-ui: calc(13px * var(--scale));
+  --fs-meta: calc(11.5px * var(--scale));
+  --fs-toc: calc(12.5px * var(--scale));
+}
+
+/* Pāḷi is Latin script. Scoping it keeps its diacritics in a Latin face. */
+.pi,
+.ipa {
+  font-family: var(--sans);
+  font-feature-settings: "kern" 1;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+html,
+body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+}
+body {
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--ui);
+  font-size: 14px;
+  line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  overscroll-behavior-y: none;
+}
+#app {
+  min-height: 100%;
+}
+h1,
+h2,
+h3,
+h4,
+p,
+ul,
+ol,
+figure {
+  margin: 0;
+}
+ul,
+ol {
+  padding: 0;
+  list-style: none;
+}
+button {
+  font: inherit;
+  color: inherit;
+  background: none;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+}
+input,
+textarea,
+select {
+  font: inherit;
+  color: inherit;
+}
+strong,
+b {
+  font-weight: 500;
+}
+/* Links never underline, on hover or otherwise. Hover is a background wash
+   plus a colour shift — quieter than a rule appearing under the text, and it
+   does not reflow the line the reader is in the middle of. */
+a {
+  color: var(--accent);
+  text-decoration: none;
+  border-radius: var(--radius-xs);
+  transition: background var(--fast), color var(--fast);
+}
+a:hover {
+  color: var(--accent-active);
+  background: var(--tag-faint);
+  text-decoration: none;
+}
+img,
+svg {
+  display: block;
+}
+:where(button, a, input, textarea, select, [tabindex]):focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: var(--radius-xs);
+}
+.num {
+  font-variant-numeric: tabular-nums;
+}
+.sr,
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+/* Scrollbars, tuned to parchment so a long book does not look like a document
+   viewer from another program. */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-strong) transparent;
+}
+*::-webkit-scrollbar {
+  width: 9px;
+  height: 9px;
+}
+*::-webkit-scrollbar-thumb {
+  background: var(--border-strong);
+  border-radius: 999px;
+  border: 2px solid transparent;
+  background-clip: content-box;
+}
+*::-webkit-scrollbar-thumb:hover {
+  background: var(--meta);
+  background-clip: content-box;
+}
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* ==========================================================================
+   Primitives
+   ========================================================================== */
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 34px;
+  padding: 7px 13px;
+  border-radius: var(--radius-md);
+  font-size: 12.5px;
+  font-weight: 500;
+  letter-spacing: 0.3px;
+  white-space: nowrap;
+  transition: background var(--fast), color var(--fast), box-shadow var(--fast);
+}
+.btn-sm {
+  min-height: 28px;
+  padding: 4px 9px;
+  font-size: 12px;
+}
+.btn-primary {
+  background: var(--accent);
+  color: var(--surface);
+  box-shadow: var(--ring-accent);
+}
+.btn-primary:hover {
+  background: var(--accent-active);
+}
+.btn-secondary {
+  background: var(--surface-warm);
+  color: var(--fg-2);
+  box-shadow: var(--ring);
+}
+.btn-secondary:hover {
+  background: var(--tag-base);
+  color: var(--fg);
+}
+.btn-ghost {
+  background: transparent;
+  color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent);
+}
+.btn-ghost:hover {
+  background: var(--tag-faint);
+}
+.btn-quiet {
+  background: transparent;
+  color: var(--muted);
+}
+.btn-quiet:hover {
+  background: var(--surface-warm);
+  color: var(--fg);
+}
+.btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.iconbtn {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-md);
+  color: var(--fg-2);
+  transition: background var(--fast), color var(--fast);
+}
+.iconbtn:hover {
+  background: var(--surface-warm);
+  color: var(--fg);
+}
+.iconbtn[aria-pressed="true"] {
+  background: var(--tag-soft);
+  color: var(--accent);
+}
+
+.tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 7px;
+  border-radius: var(--radius-xs);
+  background: var(--tag-soft);
+  color: var(--accent);
+  font-size: 11px;
+  line-height: 1.5;
+  letter-spacing: 0.4px;
+  white-space: nowrap;
+}
+.tag.plain {
+  background: var(--surface-warm);
+  color: var(--fg-2);
+}
+.tag.tiny {
+  padding: 1px 5px;
+  font-size: 10px;
+}
+
+.field {
+  width: 100%;
+  min-height: 36px;
+  padding: 8px 11px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  outline: none;
+  transition: border-color var(--fast);
+}
+.field:focus {
+  border-color: var(--accent);
+}
+.field::placeholder {
+  color: var(--meta);
+}
+
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+}
+
+.eyebrow {
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+  color: var(--meta);
+}
+
+.divider {
+  height: 1px;
+  background: var(--border-soft);
+  border: 0;
+  margin: 0;
+}
+
+.spinner {
+  width: 18px;
+  height: 18px;
+  border: 2px solid var(--border-strong);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 700ms linear infinite;
+}
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.empty {
+  padding: 40px 20px;
+  text-align: center;
+  color: var(--meta);
+  font-size: 13px;
+  line-height: 1.8;
+}
+
+/* ==========================================================================
+   Reading surface
+   ========================================================================== */
+
+/* No card. A border round every paragraph turns one continuous text into a
+   hundred separate objects and costs the reader the thing the page is for —
+   the text reads as a list of boxes rather than as a sutta. Separation comes
+   from space, which is what separates paragraphs in a printed canon. */
+.seg {
+  position: relative;
+  padding: 0 4px 0 2px;
+}
+.seg + .seg {
+  margin-top: 16px;
+}
+/* A numbered paragraph opens a new passage. The extra air above it is what
+   separates one from the next on a page with no rules and no boxes. */
+.seg.is-numbered {
+  margin-top: 34px;
+}
+.seg.is-target {
+  background: var(--tag-faint);
+  border-radius: var(--radius-sm);
+  box-shadow: -10px 0 0 var(--tag-faint), 10px 0 0 var(--tag-faint);
+}
+
+.seg-pali {
+  font-size: var(--fs-pali);
+  line-height: 1.8;
+  color: var(--fg);
+  /* The one place the serif is kept. Pāḷi is Latin script at 19.5px across a
+     whole page, which is exactly the setting a serif was drawn for; and its
+     diacritics resolve better in a Latin serif than in a Han fallback.
+     --body-font is set by the settings store from 正文字体, and falls back to
+     this when the store has not run yet. */
+  font-family: var(--body-font, var(--pali));
+}
+/* A heading's words are rendered by the same component as the body's, so this
+   wrapper carries no type of its own — the sizes live on .seg-heading.lvN. */
+.seg-heading-body {
+  display: inline;
+}
+.seg-pali.verse {
+  line-height: 1.95;
+}
+.seg-pali .line {
+  display: block;
+}
+
+/* The canon's own paragraph number, inline and bold, the way the printed
+   edition sets it. */
+.pn {
+  font-weight: 600;
+  color: var(--fg);
+  margin-right: 3px;
+}
+
+/* A run the edition set in bold — the headword of a commentary gloss. Structure,
+   not emphasis, so it carries real weight rather than a nudge. */
+.seg-pali .ed,
+.seg-pali .w.ed {
+  font-weight: 600;
+}
+
+/* A word with readings recorded against it. The ink-blue rule underneath is the
+   only mark: it has to be findable at a glance across a page, and it must not
+   change the word's own colour, which is the text. */
+.seg-pali .w.marked {
+  box-shadow: inset 0 -2px 0 0 var(--accent);
+}
+.seg-pali .w.marked:hover {
+  background: var(--tag-faint);
+}
+
+/* A word the dictionary knows. The dotted rule is the only affordance; the
+   word itself must stay readable, so it keeps the body colour until touched. */
+.w {
+  border-bottom: 1px dotted var(--border-strong);
+  transition: color var(--fast), background var(--fast);
+  cursor: pointer;
+}
+.w:hover {
+  color: var(--accent);
+  border-bottom-color: var(--accent);
+}
+.w.is-open {
+  background: var(--tag-soft);
+  color: var(--accent);
+  border-bottom-color: transparent;
+  border-radius: var(--radius-xs);
+  padding: 0 2px;
+}
+/* A compound the reader has already split: the parts are washed as one. */
+.cmp {
+  border-radius: var(--radius-xs);
+  padding: 0 3px;
+  background: var(--tag-faint);
+  box-shadow: inset 0 0 0 1px var(--tag-base);
+}
+.cmp .w {
+  border-bottom-color: transparent;
+}
+.plus {
+  color: var(--accent);
+  opacity: 0.55;
+  padding: 0 1px;
+  font-size: 0.85em;
+}
+.splitmark {
+  display: inline-block;
+  vertical-align: 2px;
+  margin-left: 3px;
+  padding: 2px 4px;
+  border-radius: var(--radius-xs);
+  background: var(--tag-base);
+  color: var(--accent);
+  font-size: 10px;
+  line-height: 1;
+  letter-spacing: 0.3px;
+  font-family: var(--serif);
+}
+/* A variant reading from the CST apparatus, shown only when the reader turns
+   variants on in 阅读设置. It has to be legible without being mistaken for the
+   text: smaller, warm grey, and set off by a thin rule. */
+.v {
+  margin: 0 2px;
+  padding: 0 3px;
+  border-radius: var(--radius-xs);
+  background: var(--surface-warm);
+  color: var(--meta);
+  font-size: 0.82em;
+  white-space: nowrap;
+}
+.b {
+  font-weight: 500;
+  color: var(--accent);
+}
+/* A heading is a line of the text, not a container of it: no card, no number
+   gutter, more air above than below so it reads as belonging to what follows. */
+/* Headings carry 600 rather than the 500 the rest of the interface uses. In a
+   serif face 500 against 400 is a difference the eye has to hunt for, and a
+   heading is structure: the reader navigates by it. */
+.seg-heading {
+  background: transparent;
+  border-color: transparent;
+  box-shadow: none;
+  padding: 28px 4px 6px;
+  /* A heading is part of the text, so it is set in the text's face. */
+  font-family: var(--body-font, var(--pali));
+  font-size: 19px;
+  font-weight: 600;
+  color: var(--fg);
+  line-height: 1.35;
+}
+.seg-heading:hover {
+  box-shadow: none;
+}
+.seg-heading + .seg-heading {
+  margin-top: 0;
+}
+/* lv1 is the nikāya a book sits in — a wrapper repeated on every page of the
+   book, so it is set small and quiet rather than as a title. */
+.seg-heading.lv1 {
+  padding-top: 16px;
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 1.4px;
+  text-transform: uppercase;
+  color: var(--meta);
+}
+.seg-heading.lv2 {
+  padding-top: 14px;
+  font-size: 25px;
+}
+.seg-heading.lv3 {
+  padding-top: 34px;
+  font-size: 21px;
+}
+.seg-heading.lv4 {
+  font-size: 19px;
+}
+.seg-heading.lv5 {
+  font-size: 16.5px;
+}
+.seg-heading.lv6 {
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--fg-2);
+}
+.seg.center .seg-pali {
+  text-align: center;
+  color: var(--muted);
+}
+
+/* The four lines that can sit under the Pāḷi, in the order a reader builds
+   them up: what they chose, what someone else translated, what they wrote,
+   what they thought. */
+.line {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  margin-top: 11px;
+}
+.linelabel {
+  flex: none;
+  margin-top: 1px;
+  padding: 1px 5px;
+  border-radius: var(--radius-xs);
+  background: var(--tag-faint);
+  color: var(--accent);
+  font-size: 11px;
+  line-height: 1.5;
+  letter-spacing: 0.3px;
+}
+.linelabel.q {
+  background: var(--surface-warm);
+  color: var(--fg-2);
+}
+.linelabel.own {
+  background: var(--surface-warm);
+  color: var(--warn);
+}
+.linebody {
+  flex: 1;
+  min-width: 0;
+  font-size: var(--fs-read);
+  line-height: 1.7;
+  color: var(--muted);
+}
+.linebody.ref {
+  color: var(--fg-2);
+}
+.src {
+  margin-left: 6px;
+  font-size: 11px;
+  color: var(--meta);
+}
+
+.glosses {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+.gloss {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: var(--radius-sm);
+  background: var(--tag-faint);
+  color: var(--muted);
+  font-size: var(--fs-read);
+  line-height: 1.5;
+  cursor: pointer;
+  transition: background var(--fast);
+}
+.gloss:hover {
+  background: var(--tag-soft);
+}
+.gloss .gw {
+  color: var(--accent);
+  font-family: var(--sans);
+}
+.gloss .gp {
+  font-size: 10.5px;
+  color: var(--meta);
+}
+
+.mine {
+  width: 100%;
+  min-height: 38px;
+  padding: 8px 10px;
+  border: 1px dashed var(--border-strong);
+  border-radius: var(--radius-sm);
+  background: transparent;
+  font-size: var(--fs-read);
+  line-height: 1.65;
+  color: var(--fg-2);
+  resize: none;
+  outline: none;
+  transition: border-color var(--fast);
+  font-family: var(--serif);
+}
+.mine::placeholder {
+  color: var(--meta);
+}
+.mine:focus {
+  border-style: solid;
+  border-color: var(--accent);
+}
+.save-state {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 5px;
+  font-size: 11px;
+  color: var(--meta);
+}
+.save-state.dirty {
+  color: var(--warn);
+}
+
+.annot {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  margin-top: 12px;
+  padding-top: 11px;
+  border-top: 1px solid var(--border-soft);
+}
+.av {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 999px;
+  background: var(--surface-warm);
+  color: var(--fg-2);
+  font-size: 11px;
+  line-height: 1;
+}
+.annot .who {
+  font-size: 11px;
+  color: var(--meta);
+  letter-spacing: 0.2px;
+}
+.annot .body {
+  font-size: var(--fs-read);
+  color: var(--fg-2);
+  line-height: 1.65;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.ghostlink {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 7px;
+  margin-left: -7px;
+  border-radius: var(--radius-sm);
+  color: var(--accent);
+  font-size: 12px;
+  letter-spacing: 0.3px;
+  transition: background var(--fast);
+}
+.ghostlink:hover {
+  background: var(--tag-faint);
+}
+
+/* ==========================================================================
+   Word lookup panel
+   ========================================================================== */
+
+.panel {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  height: 100%;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--whisper);
+  overflow: hidden;
+}
+.panel-head {
+  flex: none;
+  padding: 12px 14px 10px;
+  border-bottom: 1px solid var(--border-soft);
+}
+.panel-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.headword {
+  margin-top: 8px;
+  font-size: 25px;
+  font-weight: 500;
+  line-height: 1.2;
+  color: var(--fg);
+  letter-spacing: 0.2px;
+  overflow-wrap: anywhere;
+}
+.headword .hom {
+  font-size: 12px;
+  color: var(--meta);
+  margin-left: 6px;
+  vertical-align: 6px;
+}
+.ipa {
+  margin-top: 3px;
+  font-size: 12.5px;
+  color: var(--meta);
+  letter-spacing: 0.2px;
+}
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 8px;
+}
+.tabs {
+  flex: none;
+  display: flex;
+  gap: 15px;
+  padding: 0 14px;
+  border-bottom: 1px solid var(--border);
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.tabs::-webkit-scrollbar {
+  display: none;
+}
+.tab {
+  flex: none;
+  padding: 9px 1px 8px;
+  margin-bottom: -1px;
+  border-bottom: 2px solid transparent;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: 0.3px;
+  transition: color var(--fast), border-color var(--fast);
+}
+.tab:hover {
+  color: var(--fg);
+}
+.tab[aria-selected="true"] {
+  color: var(--accent);
+  border-bottom-color: var(--accent);
+}
+.panel-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 8px 10px 10px;
+  -webkit-overflow-scrolling: touch;
+}
+.panel-body section + section {
+  margin-top: 9px;
+  padding-top: 8px;
+  border-top: 1px solid var(--border-soft);
+}
+.sechead {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 5px;
+}
+.sectitle {
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.5px;
+  color: var(--fg-2);
+}
+.secmeta {
+  font-size: 11px;
+  color: var(--meta);
+  font-variant-numeric: tabular-nums;
+}
+
+.mean {
+  display: flex;
+  gap: 9px;
+  width: 100%;
+  text-align: left;
+  padding: 9px 10px;
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-md);
+  transition: background var(--fast), border-color var(--fast);
+}
+.mean + .mean {
+  margin-top: 6px;
+}
+.mean:hover {
+  background: var(--surface-warm);
+  border-color: var(--border);
+}
+.mean.on {
+  background: var(--tag-soft);
+  border-color: var(--tag-base);
+}
+.radio {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 15px;
+  height: 15px;
+  margin-top: 2px;
+  border-radius: 50%;
+  box-shadow: inset 0 0 0 1px var(--meta);
+}
+.mean.on .radio {
+  box-shadow: inset 0 0 0 1px var(--accent);
+}
+.mean.on .radio::after {
+  content: "";
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--accent);
+}
+.mean .dict {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  font-size: 11px;
+  letter-spacing: 0.4px;
+  color: var(--meta);
+}
+.mean .dict b {
+  font-weight: 500;
+  color: var(--fg-2);
+}
+.mean.on .dict b {
+  color: var(--accent);
+}
+.mean .en {
+  display: block;
+  margin-top: 3px;
+  font-family: var(--sans);
+  font-size: var(--fs-panel);
+  line-height: 1.5;
+  color: var(--fg);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.mean .zh {
+  display: block;
+  margin-top: 2px;
+  font-size: var(--fs-read-sm);
+  line-height: 1.65;
+  color: var(--muted);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.cchips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.cchip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 9px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  font-family: var(--sans);
+  font-size: 13px;
+  color: var(--fg);
+  transition: background var(--fast), border-color var(--fast), color var(--fast);
+}
+.cchip:hover {
+  background: var(--tag-faint);
+  border-color: var(--tag-base);
+  color: var(--accent);
+}
+.cchip.plain {
+  color: var(--muted);
+  cursor: default;
+}
+.cchip.plain:hover {
+  background: var(--surface);
+  border-color: var(--border);
+  color: var(--muted);
+}
+.cchip .op {
+  font-family: var(--serif);
+  font-size: 10px;
+  color: var(--meta);
+  letter-spacing: 0.3px;
+}
+.caption {
+  margin-top: 7px;
+  font-size: 11px;
+  color: var(--meta);
+  letter-spacing: 0.2px;
+  line-height: 1.6;
+}
+
+.dtable {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 11.5px;
+}
+.dtable th,
+.dtable td {
+  text-align: left;
+  padding: 4px 5px;
+  border-bottom: 1px solid var(--border-soft);
+  font-variant-numeric: tabular-nums;
+}
+.dtable th {
+  font-size: 10.5px;
+  font-weight: 500;
+  letter-spacing: 0.3px;
+  color: var(--meta);
+}
+.dtable td:first-child,
+.dtable th:first-child {
+  width: 40px;
+  font-size: 10.5px;
+  color: var(--meta);
+}
+.dtable td {
+  font-family: var(--sans);
+  font-size: var(--fs-read-sm);
+  color: var(--fg-2);
+  overflow-wrap: anywhere;
+}
+.dtable td .alt {
+  color: var(--meta);
+}
+.dtable tr.hit td {
+  background: var(--tag-soft);
+  color: var(--accent);
+}
+.dtable tr.hit td:first-child {
+  color: var(--accent);
+}
+.dtable td.hitcell {
+  background: var(--tag-soft);
+  color: var(--accent);
+}
+.dtable .tap {
+  cursor: pointer;
+}
+.dtable .tap:hover {
+  color: var(--accent);
+  text-decoration: underline;
+}
+
+.gtable {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12.5px;
+}
+.gtable th {
+  width: 82px;
+  padding: 2px 6px 2px 0;
+  text-align: left;
+  vertical-align: top;
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.3px;
+  color: var(--meta);
+}
+.gtable td {
+  padding: 4px 0;
+  font-size: var(--fs-panel);
+  color: var(--fg-2);
+  line-height: 1.55;
+  overflow-wrap: anywhere;
+}
+
+.famitem {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  padding: 5px 0;
+  border-bottom: 1px solid var(--border-soft);
+  font-size: 12.5px;
+}
+.famitem .fw {
+  font-family: var(--sans);
+  color: var(--fg-2);
+}
+.famitem .fg {
+  color: var(--meta);
+  font-size: 11.5px;
+}
+.provenance {
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border-soft);
+  font-size: 11px;
+  line-height: 1.7;
+  color: var(--meta);
+}
+
+/* ==========================================================================
+   Contents rail and vocabulary
+   ========================================================================== */
+
+/* A contents entry is a name and nothing else — no § number, no page number,
+   no chevron. The canon already numbers its own suttas ("1. brahmajālasuttaṃ"),
+   and hierarchy comes from indentation and type size, which are set inline per
+   level. This is how tipitaka-pali-reader presents the same corpus, and it is
+   the reason the list stays scannable at a hundred and forty entries.
+
+   The type is a Latin serif at a genuine reading size: these names are Pāḷi,
+   and at 11px in a Han fallback they were unreadable next to the Chinese. */
+.toc-item {
+  display: block;
+  width: 100%;
+  padding: 5px 8px 5px 10px;
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+  text-align: left;
+  color: var(--fg-2);
+  font-family: var(--sans);
+  font-size: 15.5px;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+  transition: background var(--fast), color var(--fast);
+}
+.toc-item:hover {
+  background: var(--surface-warm);
+  color: var(--fg);
+}
+.toc-item.is-active {
+  color: var(--accent);
+  background: var(--tag-faint);
+  box-shadow: inset 2px 0 0 var(--accent);
+}
+.toc-item.is-active:hover {
+  background: var(--tag-soft);
+  color: var(--accent);
+}
+
+/* "New words on this page" is a compact list of word plus part of speech. */
+.vitem {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  width: 100%;
+  padding: 5px 7px;
+  border-radius: var(--radius-sm);
+  text-align: left;
+  transition: background var(--fast);
+}
+.vitem:hover {
+  background: var(--surface-warm);
+}
+.vitem .vw {
+  flex: 1;
+  min-width: 0;
+  font-family: var(--sans);
+  font-size: 12px;
+  color: var(--fg-2);
+  overflow-wrap: anywhere;
+}
+.vitem .vt {
+  flex: none;
+  font-size: 10px;
+  letter-spacing: 0.3px;
+  color: var(--meta);
+}
+
+/* ==========================================================================
+   Mobile bottom sheet
+   ========================================================================== */
+
+.scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  background: rgba(20, 20, 19, 0.32);
+  animation: fade var(--base);
+}
+@keyframes fade {
+  from {
+    opacity: 0;
+  }
+}
+.sheet {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 41;
+  display: flex;
+  flex-direction: column;
+  max-height: 78vh;
+  background: var(--surface);
+  border-top-left-radius: 14px;
+  border-top-right-radius: 14px;
+  box-shadow: 0 -6px 32px rgba(0, 0, 0, 0.14);
+  animation: rise var(--base);
+  padding-bottom: env(safe-area-inset-bottom, 0);
+}
+@keyframes rise {
+  from {
+    transform: translateY(14px);
+    opacity: 0.6;
+  }
+}
+.sheet-grip {
+  flex: none;
+  display: grid;
+  place-items: center;
+  height: 22px;
+  cursor: grab;
+  touch-action: none;
+}
+.sheet-grip i {
+  display: block;
+  width: 38px;
+  height: 4px;
+  border-radius: 999px;
+  background: var(--border-strong);
+}
+/* The sheet is a column: grip, content, actions. Every link in that chain has
+   to be a flex container with min-height 0, or the content refuses to shrink and
+   pushes the action bar off the bottom of the screen. */
+.sheet > .sheet-body {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+}
+.sheet .panel {
+  flex: 1;
+  min-height: 0;
+  height: auto;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  background: transparent;
+}
+.sheet .panel-body {
+  overscroll-behavior: contain;
+}
+.sheet-foot {
+  flex: none;
+  display: flex;
+  gap: 8px;
+  padding: 10px 14px 12px;
+  border-top: 1px solid var(--border);
+}
+.sheet-foot .btn {
+  flex: 1;
+  min-height: 44px;
+}
+
+/* ==========================================================================
+   Layout
+   ========================================================================== */
+
+.shell {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+.topbar {
+  position: sticky;
+  top: 0;
+  z-index: 30;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  height: var(--topbar-h);
+  padding: 0 12px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+}
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: none;
+}
+/* The mark stands on its own. The ringed 30px tile was sized around a Lucide
+   glyph that needed a box to sit in; the leaf-eye has its own outline, and
+   boxing it only made both smaller. */
+.brand .mark {
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  color: var(--accent);
+}
+.brand .mark svg {
+  width: 24px;
+  height: 24px;
+}
+.brand .nm {
+  font-size: 14.5px;
+  font-weight: 500;
+  letter-spacing: 0.3px;
+  white-space: nowrap;
+}
+.crumbs {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  font-size: 12px;
+  color: var(--meta);
+}
+.crumbs li {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.crumbs .cur {
+  color: var(--fg-2);
+  font-weight: 500;
+}
+.searchwrap {
+  flex: 1;
+  display: flex;
+  justify-content: center;
+  min-width: 0;
+}
+.search {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  max-width: 440px;
+  height: 36px;
+  padding: 0 11px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  color: var(--meta);
+  transition: border-color var(--fast);
+}
+.search:focus-within {
+  border-color: var(--accent);
+}
+.search input {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  background: transparent;
+  outline: none;
+  font-size: 13px;
+  color: var(--fg);
+}
+.kbd {
+  padding: 2px 6px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--meta);
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.4px;
+  white-space: nowrap;
+}
+.bar-actions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  flex: none;
+}
+.avatar {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  margin-left: 4px;
+  border-radius: 999px;
+  background: var(--surface-warm);
+  color: var(--fg-2);
+  font-size: 12px;
+  line-height: 1;
+  box-shadow: var(--ring);
+}
+
+/* Three columns: a side panel on the left, the text, the contents on the right.
+   The side panel holds either the catalogue or the dictionary — the dictionary
+   is on the left because that is where the eye goes for a tool, and it leaves
+   the right-hand column free for the contents, which the reader scans while
+   reading rather than consults. */
+.workspace {
+  flex: 1;
+  display: grid;
+  /* One width for both side panels. The dictionary needs the room and the tree
+     does not mind having it, but the important part is that the column does not
+     change size when the reader switches tabs — a panel that jumps costs the
+     eye its place. */
+  --side-w: 320px;
+  grid-template-columns: var(--side-w) minmax(0, 1fr) var(--toc-w);
+  min-height: 0;
+  transition: grid-template-columns var(--base);
+}
+.workspace.rail-collapsed {
+  --side-w: 52px;
+}
+/* Collapsed to a strip holding only the button that brings it back. */
+.workspace.toc-collapsed {
+  --toc-w: 46px;
+}
+
+/* Below the three-column breakpoint the rail and the contents become drawers
+   and the dictionary becomes a bottom sheet, so the workspace is a single
+   column. Without this the reading column is laid into the rail's track and the
+   text wraps at about a third of the screen. */
+@media (max-width: 1100px) {
+  .workspace,
+  .workspace.side-dict,
+  .workspace.rail-collapsed {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.col {
+  min-height: 0;
+  height: calc(100vh - var(--topbar-h));
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+/* Document-style pages — catalogue, search, vocabulary, settings.
+   They scroll as one page, not as a fixed-height pane. Giving them their own
+   class rather than overriding .col inline is what removes the nested scroll
+   container: a fixed height plus overflow:auto on a flex item is a scroll box
+   whose scrollbar belongs to an element the reader cannot see, and a wheel
+   over the content can end up scrolling nothing. */
+.page {
+  flex: 1;
+  min-height: 0;
+  padding: 30px 24px 96px;
+}
+.page-inner {
+  width: 100%;
+  max-width: var(--page-max);
+  margin: 0 auto;
+}
+:root { --page-max: 1400px; }
+.col-rail {
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.col-toc {
+  border-left: 1px solid var(--border);
+  padding: 14px 12px 24px;
+}
+.col-panel {
+  padding: 12px;
+}
+.col-read {
+  padding: 20px 20px 120px;
+}
+.measure {
+  max-width: 720px;
+  margin: 0 auto;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
