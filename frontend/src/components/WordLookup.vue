@@ -596,17 +596,25 @@ function bare(p) {
   display: flex;
   align-items: center;
   gap: 6px;
-  padding: 4px 7px;
-  border-radius: var(--radius-sm);
+  padding: 4px 7px 3px;
+  /* Square, like the tabs and the entries. A radius also bends the underline
+     that appears on focus, turning a rule into a stroke with rounded ends. */
+  border-radius: 0;
+  /* Always drawn, transparent until focus, so the row does not shift by a pixel
+     when the underline appears. */
+  border-bottom: 1px solid transparent;
   color: var(--meta);
-  transition: background var(--fast), color var(--fast);
+  transition: background var(--fast), border-color var(--fast), color var(--fast);
 }
 .q:hover {
   background: var(--surface-warm);
   color: var(--fg-2);
 }
+/* Focus is the underline, not a filled field. A wash behind the whole box made
+   the panel look like it had switched into a form. */
 .q:focus-within {
-  background: var(--tag-faint);
+  background: transparent;
+  border-bottom-color: var(--accent);
   color: var(--accent);
 }
 .q input {
