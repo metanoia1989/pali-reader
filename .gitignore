@@ -1,0 +1,41 @@
+# Build output
+frontend/dist/
+frontend/node_modules/
+frontend/.npmrc.local
+
+# Cross-compiled binaries dropped here by hand
+backend/pali-reader
+backend/pali-importer
+
+# Upstream data sources. Large, and reproducible from the links in README.md —
+# never commit them. On the server they live in
+# /www/server/go_project/pali_reading/sources.
+data/
+sources/
+*.db
+*.db-wal
+*.db-shm
+*.zip
+
+# Editor and OS noise
+.DS_Store
+.idea/
+.vscode/
+*.swp
+
+# Frontend build scratch
+frontend/.ssr/
+
+# Desktop app: dependencies, Electron's own binary cache, and the packed bundle.
+# Together these are ~590 MB of development leftovers and none of them ship —
+# the packed .app contains only Electron's framework, frontend/dist and desktop/src.
+desktop/node_modules/
+desktop/.cache/
+desktop/build/
+
+# Go build output
+/backend/backend
+
+# Stray local build products
+backend/tokcheck
+backend/refdiag
