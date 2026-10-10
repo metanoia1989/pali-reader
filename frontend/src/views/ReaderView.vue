@@ -182,6 +182,45 @@ function setupObserver() {
 
 // --- scrollspy -----------------------------------------------------------
 let ticking = false
+// The top bar slides away while the reader is going down the page and comes
+// back the moment they go up. Three rules keep it from being annoying:
+//
+//   - at the top of the page it is always shown, so the way back to the
+//     catalogue never has to be scrolled for;
+//   - a reversal has to accumulate a real distance, not one pixel, or a
+//     trackpad that jitters holds the bar in a permanent flicker;
+//   - it comes back on focus, so a keyboard user is never typing into a control
+//     that has slid off the screen.
+//
+// The two side rails deliberately do NOT do this. They are columns: hiding one
+// changes the width of the text, which reflows every line and moves the line the
+// reader is on — the opposite of what this setting is for. The top bar is an
+// overlay; hiding it costs the text nothing. The rails have their own collapse
+// buttons for a reader who wants the room.
+const BAR_REVEAL_AT = 40
+const BAR_DIRECTION_SLACK = 24
+let lastY = 0
+let goingUp = 0
+
+function trackBar(col) {
+  const y = col.scrollTop
+  const dy = y - lastY
+  lastY = y
+  if (!S.autoHideBar) {
+    R.barHidden = false
+    return
+  }
+  if (y <= BAR_REVEAL_AT) {
+    goingUp = 0
+    R.barHidden = false
+    return
+  }
+  if (dy > 0) goingUp = 0
+  else if (dy < 0) goingUp += -dy
+  if (goingUp >= BAR_DIRECTION_SLACK) R.barHidden = false
+  else if (dy > BAR_DIRECTION_SLACK) R.barHidden = true
+}
+
 function onScroll() {
   if (ticking) return
   ticking = true
@@ -189,6 +228,7 @@ function onScroll() {
     ticking = false
     const col = readCol.value
     if (!col) return
+    trackBar(col)
     const cards = col.querySelectorAll('[data-seq]')
     const top = 90
     let current = 0

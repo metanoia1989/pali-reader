@@ -54,6 +54,16 @@ export const DEFAULTS = {
   variants: false,
   // 正文字体: the face the canon's own text is set in.
   bodyFont: 'serif', // serif | sans
+  // 顶栏随滚动收起: the top bar slides away while reading downward and comes
+  // back on the first upward scroll, at the top of the page, or on focus.
+  //
+  // Off by default. It is a preference about how a page feels rather than what
+  // it shows, and a bar that moves on its own is the kind of thing a reader
+  // should ask for rather than discover.
+  //
+  // It governs the top bar ONLY. The two side rails keep their own collapse
+  // buttons and do not move on scroll — see ReaderView's onScroll for why.
+  autoHideBar: false,
 }
 
 // merge fills in anything a stored copy is missing, and drops anything whose

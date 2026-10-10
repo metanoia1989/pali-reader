@@ -22,6 +22,10 @@ const options = {
     { v: 'off', l: '隐藏' },
     { v: 'all', l: '全部展开' },
   ],
+  autoHideBar: [
+    { v: false, l: '关闭' },
+    { v: true, l: '开启' },
+  ],
   nameLang: [
     { v: 'zh', l: '中文' },
     { v: 'pi', l: '巴利语' },
@@ -77,6 +81,25 @@ const specimen = computed(() => (S.scale >= 1.15 ? 'evaṃ me sutaṃ – ekaṃ
       只决定一开始显不显示。句子末尾的 <span class="pi">中</span>／<span class="pi">英</span>
       开<b>这一句</b>，段落左上角那一对开<b>整段</b>；两种设置下都能点，
       也可以把已经显示的关掉。
+    </p>
+
+    <div class="set-row">
+      <span class="set-label">顶栏随滚动收起</span>
+      <div class="seg">
+        <button
+          v-for="o in options.autoHideBar"
+          :key="String(o.v)"
+          :aria-pressed="S.autoHideBar === o.v"
+          @click="S.set('autoHideBar', o.v)"
+        >
+          {{ o.l }}
+        </button>
+      </div>
+    </div>
+    <p class="set-note">
+      向下读时顶栏滑走；向上滚一点、回到顶部、或点到它上面时回来。
+      <b>只影响顶栏</b>——左右两栏不会跟着动：它们是列，收起来会改变正文宽度，
+      把读者正在读的那一行挪走。
     </p>
 
     <div class="set-row">

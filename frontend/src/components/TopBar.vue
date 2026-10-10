@@ -92,7 +92,7 @@ onBeforeUnmount(() => window.removeEventListener('resize', onResize))
 </script>
 
 <template>
-  <header class="topbar">
+  <header class="topbar" :class="{ 'is-hidden': R.barHidden }">
     <!-- On a phone, in the reader, this corner is the contents drawer.
          The drawer carries its own link back to the catalogue, so nothing is
          lost by spending the corner on the thing a reader reaches for first. -->

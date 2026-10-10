@@ -61,6 +61,10 @@ export const useReader = defineStore('reader', {
     // The left contents drawer on a phone. In the store rather than in the view
     // because the top bar owns the button that opens it.
     railDrawer: false,
+    // Whether the top bar is currently slid away. In the store because the
+    // scroll that decides it happens in the reading column and the bar that
+    // obeys it is a different component.
+    barHidden: false,
 
     // which segment the reader is looking at, for the toc scrollspy
     activeSegment: 1,
