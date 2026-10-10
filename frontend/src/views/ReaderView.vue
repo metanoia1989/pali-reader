@@ -839,13 +839,16 @@ const progress = computed(() => {
    the title attribute carries the name for anyone who needs it. */
 .col-rail.is-collapsed .side-tabs {
   flex-direction: column;
-  padding: 6px 4px;
+  /* The same rule as the expanded bar: no horizontal inset, so the pressed
+     tab's tint runs to both edges of the 52px strip. The vertical padding stays
+     — that is what separates the two buttons, not what insets them. */
+  padding: 6px 0;
 }
 .col-rail.is-collapsed .tab-label {
   display: none;
 }
 .col-rail.is-collapsed .side-tabs button {
-  padding: 7px 0;
+  padding: 9px 0;
 }
 /* No side padding: the pressed tab's tint runs to the edge of its half, which
    reads as two halves of one control rather than two buttons in a box. */
