@@ -10,6 +10,7 @@ import { useSettings } from '../store/settings'
 import SettingsPanel from './SettingsPanel.vue'
 import BrandMark from './BrandMark.vue'
 import { useReader } from '../store/reader'
+import { focusSearchField } from '../utils/searchFocus'
 
 defineProps({
   crumbs: { type: Array, default: () => [] },
@@ -38,7 +39,9 @@ function submit() {
 function onKey(e) {
   if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
     e.preventDefault()
-    searchEl.value?.focus()
+    // On the reading page the field belongs to the view, which registers how to
+    // focus it; elsewhere the field below is the bar's own.
+    if (!focusSearchField()) searchEl.value?.focus()
   }
   if (e.key === 'Escape') S.panelOpen = false
 }
@@ -121,17 +124,24 @@ onBeforeUnmount(() => window.removeEventListener('resize', onResize))
     </ul>
 
     <div class="searchwrap">
-      <form class="search" @submit.prevent="submit">
-        <Search :size="15" />
-        <input
-          ref="searchEl"
-          v-model="q"
-          type="search"
-          placeholder="搜索经文…"
-          aria-label="搜索经文"
-        />
-        <span class="kbd">⌘K</span>
-      </form>
+      <!-- The reading page replaces this with a search over the book that is
+           open: a field, a switch that chooses what is searched, and the
+           results under it. Everywhere else the bar's own field is the way to
+           the search page, and the ⌘K badge that used to sit at its right is
+           gone — it was a reminder of a shortcut in the one place where the
+           reader's own choice belongs. The shortcut still works. -->
+      <slot name="search">
+        <form class="search" @submit.prevent="submit">
+          <Search :size="15" />
+          <input
+            ref="searchEl"
+            v-model="q"
+            type="search"
+            placeholder="搜索经文…"
+            aria-label="搜索经文"
+          />
+        </form>
+      </slot>
     </div>
 
     <nav class="bar-actions">
@@ -165,8 +175,15 @@ onBeforeUnmount(() => window.removeEventListener('resize', onResize))
           <button class="menu-item" @click="signOut"><LogOut :size="15" />退出登录</button>
         </div>
       </template>
-      <router-link v-else to="/login" class="btn btn-ghost btn-sm" style="margin-left: 6px">
-        <User :size="15" />登录
+      <router-link
+        v-else
+        to="/login"
+        class="btn btn-ghost btn-sm login"
+        style="margin-left: 6px"
+        aria-label="登录"
+        title="登录"
+      >
+        <User :size="15" aria-hidden="true" /><span class="login-text">登录</span>
       </router-link>
     </nav>
 
@@ -240,7 +257,11 @@ onBeforeUnmount(() => window.removeEventListener('resize', onResize))
   .crumbs {
     display: none;
   }
-  .kbd {
+  /* The word goes, the icon stays — which is what the signed-in state already
+     looks like in this corner. On a 390px bar the 30px this frees is the
+     difference between a search field a reader can type a word into and one
+     that shows two characters. The name survives as the accessible label. */
+  .login-text {
     display: none;
   }
 }

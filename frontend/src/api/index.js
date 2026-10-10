@@ -119,9 +119,20 @@ export const api = {
   search: (q, opts = {}) => get('/search', { q, ...opts }),
   searchBook: (id, q, opts = {}) =>
     get(`/books/${encodeURIComponent(id)}/search`, { q, ...opts }),
+  // Names rather than text: volumes, and the suttas and chapters inside them,
+  // each in Pāḷi and in whatever languages the reader has translations for.
+  searchTitles: (q, opts = {}) => get('/search/titles', { q, ...opts }),
+  // The published translations of one book. Scoped to the book because that is
+  // what the key on ref_translations can answer quickly; see the handler.
+  searchRefs: (id, q, opts = {}) =>
+    get(`/books/${encodeURIComponent(id)}/refs/search`, { q, ...opts }),
 
   // --- dictionary ------------------------------------------------------
   lookup: (word) => get('/dict/lookup', { word }),
+  // The English dictionary behind the 参考译文 popup: meanings of one English
+  // word, and nothing the Pāḷi panel needs. A separate endpoint so the popup
+  // never pays for an analysis it does not draw — see the handler.
+  enLookup: (word) => get('/dict/en/lookup', { word }),
   suggest: (q, limit) => get('/dict/suggest', { q, limit }),
   declension: (pattern, form) => get('/dict/declension', { pattern, form }),
 

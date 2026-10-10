@@ -11,6 +11,7 @@ import { renderToString } from 'vue/server-renderer'
 import SegmentCard from '../src/components/SegmentCard.vue'
 import WordLookup from '../src/components/WordLookup.vue'
 import CatalogTree from '../src/components/CatalogTree.vue'
+import EnWordPopup from '../src/components/EnWordPopup.vue'
 import { useSettings } from '../src/store/settings'
 
 // --- the browser bits the components reach for ----------------------------
@@ -181,6 +182,42 @@ const TreeApp = {
   },
 }
 
+// --- the English dictionary popup -----------------------------------------
+// Every state it has, rendered together: a word with meanings (one of them
+// carrying the dictionary's own line break and a tag on the second line), a
+// word answered from another form, a word with no entry, and a deployment where
+// the add-on dictionary was never imported. The last two must not look alike:
+// one is a fact about the word, the other a fact about this installation.
+const EN_FOUND = {
+  visible: true, word: 'dwelling', head: 'dwelling', phonetic: "'dweliŋ",
+  via: '', senses: [{ pos: 'n.', def: '住处\n[医] 住房' }, { pos: 'v.', def: '居住' }],
+  available: true, notFound: false, loading: false, error: '',
+  sheet: false, placement: 'below', x: 400, y: 300, w: 336, caretX: 120,
+}
+const EN_VIA = {
+  ...EN_FOUND, word: 'uses', head: 'use', phonetic: '', via: 'use',
+  senses: [{ pos: 'n.', def: '使用, 用途' }],
+}
+const EN_MISSING = {
+  ...EN_FOUND, word: 'bhikkhus', head: '', phonetic: '', via: '', senses: [], notFound: true,
+}
+const EN_ABSENT = {
+  ...EN_FOUND, word: 'dwelling', head: '', phonetic: '', via: '',
+  senses: [], notFound: false, available: false,
+}
+
+const EnPopApp = {
+  setup() {
+    return () =>
+      h('div', { class: 'page' }, [
+        h(EnWordPopup, { popup: EN_FOUND }),
+        h(EnWordPopup, { popup: EN_VIA }),
+        h(EnWordPopup, { popup: EN_MISSING }),
+        h(EnWordPopup, { popup: EN_ABSENT }),
+      ])
+  },
+}
+
 const pinia = createPinia()
 setActivePinia(pinia)
 const which = process.argv[2] || 'cards'
@@ -190,7 +227,8 @@ if (which === 'cards') {
   // nothing, so it pins 点击: 全部 — the default — is render-page.mjs's job.
   useSettings().refMode = 'click'
 }
-const app = createSSRApp(which === 'panel' ? PanelApp : which === 'tree' ? TreeApp : App)
+const APPS = { panel: PanelApp, tree: TreeApp, enpop: EnPopApp, cards: App }
+const app = createSSRApp(APPS[which] || App)
 app.use(pinia)
 
 // The catalogue rail navigates with router-link. Without a router installed the

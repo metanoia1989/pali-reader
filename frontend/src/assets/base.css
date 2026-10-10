@@ -555,6 +555,26 @@ svg {
   border-radius: var(--radius-xs);
   padding: 0 2px;
 }
+/* A word in the English 参考译文. The same affordance as a Pāḷi word and for the
+   same reason — it is the only thing that says the row can be touched — but it
+   stops at hover: no "open" state, because the popup is a glance that closes on
+   the next click and never marks the word as being read.
+   The row is set quieter than the canon (--fg-2), so nothing here recolours the
+   text; only the rule under it brightens. */
+.line--ref .enw {
+  border-bottom: 1px dotted var(--border-strong);
+  cursor: pointer;
+  transition: color var(--fast), background var(--fast), border-color var(--fast);
+}
+.line--ref .enw:hover {
+  color: var(--accent);
+  border-bottom-color: var(--accent);
+}
+.line--ref .enw:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+  border-radius: var(--radius-xs);
+}
 /* A compound the reader has already split: the parts are washed as one. */
 .cmp {
   border-radius: var(--radius-xs);
@@ -1536,7 +1556,15 @@ svg {
 }
 .col-toc {
   border-left: 1px solid var(--border);
-  padding: 14px 12px 24px;
+  padding: 14px 12px 0;
+  /* The list inside is the scroller, not the column: the header — and the
+     button that folds the rail — then stays put while the headings move under
+     it, which is also what lets the phone's drawer and this rail be the same
+     component. `overflow: hidden` keeps the column itself from scrolling a
+     second time behind it. */
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
 }
 .col-panel {
   padding: 12px;

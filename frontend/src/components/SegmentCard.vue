@@ -27,6 +27,7 @@ import {
   X,
 } from 'lucide-vue-next'
 import PaliText from './PaliText.vue'
+import EnRefText from './EnRefText.vue'
 import { useSettings } from '../store/settings'
 
 const props = defineProps({
@@ -67,6 +68,10 @@ const emit = defineEmits([
   'add-note',
   'delete-note',
   'need-auth',
+  // A word in the English 参考译文. Named apart from 'pick' because it is a
+  // different thing: nothing is recorded, and the English dictionary popup is
+  // not the Pāḷi panel.
+  'en-word',
 ])
 
 const S = useSettings()
@@ -453,7 +458,15 @@ const mine = computed(() => (props.translation?.text || '').trim())
       <div v-for="(r, i) in refLines" :key="r.lang" class="line line--ref">
         <span class="line-tag"><Languages :size="13" :stroke-width="1.8" /></span>
         <div class="line-body" :lang="r.lang === 'zh' ? 'zh-Hans' : 'en'">
-          {{ r.text }}<span class="src">{{ refSource(r.lang) }}</span>
+          <!-- Only the English row is tappable: the dictionary behind it is an
+               English one, and the Chinese has nothing to look up in it. The
+               Pāḷi above has its own lookup and does not come through here. -->
+          <EnRefText
+            v-if="r.lang === 'en'"
+            :text="r.text"
+            @word="(p) => emit('en-word', p)"
+          /><template v-else>{{ r.text }}</template
+          ><span class="src">{{ refSource(r.lang) }}</span>
         </div>
       </div>
     </template>

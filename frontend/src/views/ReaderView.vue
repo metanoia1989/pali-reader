@@ -5,7 +5,7 @@
 // word panel as a fourth when a word is open. On a phone the same pieces become
 // a drawer and a bottom sheet; the reading column itself never changes shape,
 // because that is the one thing the reader is actually looking at.
-import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import {
   BookA,
@@ -23,12 +23,17 @@ import { api } from '../api'
 import { useAuth } from '../store/auth'
 import { useReader } from '../store/reader'
 import { useSettings } from '../store/settings'
-import { tocEntries, tocStyle } from '../utils/numbering'
+import { tocEntries } from '../utils/numbering'
+import { isEnSheet, placeEnPopup } from '../utils/enpopup'
 import { dragTo, placePopup } from '../utils/popups'
+import { edgeLoads, pumpEdges } from '../utils/window'
 import TopBar from '../components/TopBar.vue'
 import CatalogTree from '../components/CatalogTree.vue'
+import ReaderSearch from '../components/ReaderSearch.vue'
 import SegmentCard from '../components/SegmentCard.vue'
+import TocList from '../components/TocList.vue'
 import WordLookup from '../components/WordLookup.vue'
+import EnWordPopup from '../components/EnWordPopup.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -104,7 +109,10 @@ function paraOn(seqs) {
 // goes to for a tool, and it leaves the right for the contents.
 const side = ref('catalog') // catalog | dict
 const tocOpen = ref(false)
-const sentinel = ref(null)
+// One sentinel per end of the loaded window. They are siblings of the segment
+// list, so what lies between them is exactly what is in the DOM.
+const sentinelTop = ref(null)
+const sentinelBottom = ref(null)
 const readCol = ref(null)
 const lookupError = ref('')
 
@@ -114,17 +122,30 @@ const isMobile = ref(false)
 function measure() {
   isMobile.value = window.innerWidth < 1100
   if (window.innerWidth < 760) railCollapsed.value = true
+  // A taller viewport can put the far sentinel inside the margin with no
+  // scrolling at all, and no scroll event will ever say so.
+  requestAnimationFrame(() => pump())
 }
 onMounted(() => {
   measure()
   window.addEventListener('resize', measure)
 })
 
+// The last seq written into the address bar, so a watcher and a deliberate jump
+// cannot write it twice — and so the URL the reader arrived with is not
+// immediately rewritten to something coarser before they have moved at all.
+// Declared here rather than beside writeUrl() below because boot() runs during
+// setup, and a `const` further down would still be in its dead zone.
+let urlSeq = Number(route.query.seq || 0)
+
 // --- open a book ---------------------------------------------------------
 async function boot() {
   const seq = Number(route.query.seq || 0)
+  urlSeq = seq
   await R.open(bookId.value, { seq: seq || 0 })
   if (!seq) restorePosition()
+  await nextTick()
+  pump()
 }
 
 // Put the reader back where they stopped. Stored per browser as well as on the
@@ -132,7 +153,10 @@ async function boot() {
 function restorePosition() {
   try {
     const v = Number(localStorage.getItem('pali.pos.' + bookId.value) || 0)
-    if (v > 1 && v <= R.segments.length) {
+    // Against the book's length, not against what happens to be loaded: the
+    // window is bounded now, so a position a third of the way in is regularly
+    // outside the first window and used to be discarded as out of range.
+    if (v > 1 && v <= R.total) {
       requestAnimationFrame(() => R.scrollToSeq(v))
     }
   } catch {
@@ -143,6 +167,21 @@ function restorePosition() {
 watch(bookId, boot, { immediate: true })
 
 onMounted(async () => {
+  // The store anchors prepends to this element, so it has to know which one it
+  // is before the first backward load.
+  R.bindScroller(readCol.value)
+  // The URL says where the reader is — which contents cell — so the browser
+  // must not also try to restore a pixel offset of its own. It would be a
+  // second, disagreeing answer to the same question, and it is the one that
+  // wins: restoration happens after our scroll, so the reader would land
+  // somewhere the address bar does not describe. Set here rather than in
+  // index.html because it is the reading page's problem, and put back on the
+  // way out so the other, ordinary pages keep the browser's behaviour.
+  const restore = window.history?.scrollRestoration
+  if (restore) window.history.scrollRestoration = 'manual'
+  onBeforeUnmount(() => {
+    if (restore) window.history.scrollRestoration = restore
+  })
   try {
     const c = await api.catalog()
     catalog.value = c.baskets || []
@@ -150,34 +189,72 @@ onMounted(async () => {
     /* the rail is a convenience; the reader still works without it */
   }
   window.addEventListener('keydown', onKey)
-  setupObserver()
+  window.addEventListener('click', onDocClick)
+  await nextTick()
+  pump()
 })
 onBeforeUnmount(() => {
+  R.bindScroller(null)
   window.removeEventListener('keydown', onKey)
+  window.removeEventListener('click', onDocClick)
   window.removeEventListener('resize', measure)
-  io?.disconnect()
 })
 
 function onKey(e) {
   if (e.key === 'Escape') {
-    if (R.panelOpen) R.closePanel()
+    // Innermost first: the English glance is the smallest thing on the page,
+    // so it is what Escape means while it is up.
+    if (enPop.visible) closeEnPop()
+    else if (R.panelOpen) R.closePanel()
     else if (tocOpen.value) tocOpen.value = false
   }
 }
 
-// --- infinite scroll -----------------------------------------------------
-let io = null
-function setupObserver() {
-  io = new IntersectionObserver(
-    (entries) => {
-      if (entries.some((e) => e.isIntersecting)) R.loadMore()
-    },
-    { rootMargin: '600px 0px' },
-  )
-  watch(sentinel, (el) => {
-    io.disconnect()
-    if (el) io.observe(el)
+// --- the window's two edges -------------------------------------------------
+//
+// The reading column holds a contiguous run of segments and either end of it
+// can be extended. What decides is where the two sentinels are on screen, asked
+// afresh every time — see utils/window.js for why an IntersectionObserver was
+// the wrong instrument: it reports a change of intersection, so a load that
+// left the sentinel inside the margin was never followed by another one and the
+// page simply stopped growing.
+//
+// It is asked again after every load, on every scroll (already one per frame),
+// after a jump, and when the window is resized — a taller viewport moves the
+// bottom sentinel into the margin without any scrolling at all.
+let pumping = false
+
+function edges() {
+  const col = readCol.value
+  const top = sentinelTop.value
+  const bottom = sentinelBottom.value
+  if (!col || !top || !bottom) return { prev: false, next: false }
+  const need = edgeLoads({
+    col: col.getBoundingClientRect(),
+    top: top.getBoundingClientRect(),
+    bottom: bottom.getBoundingClientRect(),
   })
+  return { prev: need.prev && !R.doneStart, next: need.next && !R.doneEnd }
+}
+
+// One request per round, and the geometry decides whether there is another.
+// This is what makes the deadlock impossible: a load that leaves the sentinel
+// inside the margin is followed by the next round, which loads again, until
+// either the margin is satisfied or the end of the book is reached. A failed
+// request stops the burst outright rather than retrying into the same failure.
+async function pump() {
+  if (pumping) return
+  pumping = true
+  try {
+    await pumpEdges({
+      need: edges,
+      loadPrev: () => R.loadPrev(),
+      loadMore: () => R.loadMore(),
+      settle: nextTick,
+    })
+  } finally {
+    pumping = false
+  }
 }
 
 // --- scrollspy -----------------------------------------------------------
@@ -262,6 +339,9 @@ function onScroll() {
         /* private mode */
       }
     }
+    // Last, so the trim that follows a load is planned against the segment the
+    // reader has just been found to be on rather than the previous one.
+    pump()
   })
 }
 
@@ -278,29 +358,78 @@ const activeTocIndex = computed(() => {
   }
   return idx
 })
+// The heading the reader is in — the unit the address bar follows and the unit
+// the contents highlights. One thing, computed once.
+const activeHeading = computed(() => toc.value[activeTocIndex.value] || null)
+
+// Everything the reader asks to be taken to goes through here: a contents
+// click, a search hit inside this book. One place, so "a deliberate jump leaves
+// a history entry and a scroll does not" is a property of the app rather than
+// of whichever control happened to be written last.
+async function jumpTo(seq) {
+  if (!seq) return
+  writeUrl(seq, { push: true })
+  await R.scrollToSeq(seq)
+  // A jump puts the reader wherever the target landed — often near one end of
+  // the new window. Ask both ends whether they need more before handing back,
+  // so the reader's first scroll in either direction has something in hand.
+  await nextTick()
+  pump()
+}
 
 function goto(seq) {
   tocOpen.value = false
   R.railDrawer = false
-  R.scrollToSeq(seq)
+  jumpTo(seq)
 }
 
-// Keep the contents rail showing where the reader is: with a hundred and
-// forty entries the active one is usually off-screen otherwise.
-const tocCol = ref(null)
-const activeTocEl = ref(null)
-watch(activeTocIndex, () => {
-  requestAnimationFrame(() => {
-    const el = activeTocEl.value
-    const col = tocCol.value
-    if (!el || !col) return
-    const top = el.offsetTop
-    const h = col.clientHeight
-    if (top < col.scrollTop + 40 || top > col.scrollTop + h - 60) {
-      col.scrollTop = Math.max(0, top - h / 3)
-    }
-  })
+// --- the address bar -------------------------------------------------------
+//
+// Where the reader is, in the URL, at the granularity of one cell of the
+// contents rail: `/read/tika_an_04?seq=1234`. Not the paragraph — a reader does
+// not want four hundred history entries for one sutta — and not the pixel,
+// which is not a place in a book.
+//
+// A query parameter rather than a hash, because `?seq=` is already how this app
+// says "open here": the search results link to `/read/<book>?seq=<n>` and
+// `open()` reads it. A hash would be a second way of saying the same thing, and
+// the two would drift — the search page linking with one, the address bar
+// showing the other.
+//
+// Replace when the position changed because the reader scrolled, push when they
+// deliberately jumped (a contents click, or a search hit). So Back leaves the
+// book, or returns to the section they jumped from, instead of unwinding a
+// hundred scroll positions one press at a time.
+// Replace when the position changed because the reader scrolled, push when they
+// deliberately jumped (a contents click, or a search hit). So Back leaves the
+// book, or returns to the section they jumped from, instead of unwinding a
+// hundred scroll positions one press at a time.
+function writeUrl(seq, { push = false } = {}) {
+  if (!seq || seq === urlSeq) return
+  urlSeq = seq
+  const query = { ...route.query, seq: String(seq) }
+  if (push) router.push({ query })
+  else router.replace({ query })
+}
+
+// The URL follows the paragraph the reader has moved into, one contents cell at
+// a time.
+watch(activeHeading, (h) => {
+  if (h) writeUrl(h.seq)
 })
+
+// The other direction: Back and Forward, or a link into the same book. Without
+// this the address bar would change under a Back press and the text would not
+// move, which is worse than not touching the URL at all.
+watch(
+  () => route.query.seq,
+  (v) => {
+    const seq = Number(v || 0)
+    if (!seq || seq === urlSeq) return
+    urlSeq = seq
+    R.scrollToSeq(seq)
+  },
+)
 
 const crumbs = computed(() => {
   const b = R.book
@@ -322,7 +451,98 @@ async function pick(p) {
   // old one, so they go — that is the gesture the reader already makes to move
   // on, and it saves closing them one at a time.
   popups.value = []
+  // The same goes for the English glance: the reader has moved to a Pāḷi word.
+  closeEnPop()
   await R.showWord(p.word, p.segment, p.wordIndex)
+}
+
+// --- the English dictionary popup ----------------------------------------
+// One word of the English 参考译文 and what it means. It is not the panel:
+// nothing is recorded, nothing is picked, and there is only ever one of it —
+// tapping the next word replaces its contents instead of opening a second card.
+// That is what makes it safe to leave un-draggable: anything the reader does
+// next (tap another word, tap anywhere else, press Esc, look up a Pāḷi word)
+// puts it away, so it cannot end up parked over the sentence being read.
+const enPop = reactive({
+  visible: false,
+  word: '',
+  head: '',
+  phonetic: '',
+  via: '',
+  senses: [],
+  available: true,
+  notFound: false,
+  loading: false,
+  error: '',
+  sheet: false,
+  placement: 'below',
+  x: 0,
+  y: 0,
+  w: 0,
+  caretX: 0,
+})
+
+// Every lookup carries the number it was started with; a late answer for a word
+// the reader has already moved on from is dropped rather than drawn.
+let enSeq = 0
+
+function closeEnPop() {
+  enPop.visible = false
+  enSeq++
+}
+
+async function onEnWord({ word, el }) {
+  if (!word) return
+  const seq = ++enSeq
+
+  const rect = el?.getBoundingClientRect?.()
+  const vp = { width: window.innerWidth, height: window.innerHeight }
+  enPop.sheet = isEnSheet(vp.width)
+  const at = placeEnPopup(
+    rect
+      ? { left: rect.left, right: rect.right, top: rect.top, bottom: rect.bottom }
+      : { left: vp.width / 2, right: vp.width / 2, top: 80, bottom: 80 },
+    vp,
+  )
+  Object.assign(enPop, {
+    word,
+    head: '',
+    phonetic: '',
+    via: '',
+    senses: [],
+    available: true,
+    notFound: false,
+    error: '',
+    loading: true,
+    visible: true,
+    ...at,
+  })
+
+  try {
+    const data = await api.enLookup(word)
+    if (seq !== enSeq) return
+    enPop.head = data.word || ''
+    enPop.phonetic = data.phonetic || ''
+    enPop.via = data.via || ''
+    enPop.senses = data.senses || []
+    enPop.available = data.available !== false
+    enPop.notFound = !data.found
+  } catch (e) {
+    if (seq !== enSeq) return
+    enPop.error = e.message
+  } finally {
+    if (seq === enSeq) enPop.loading = false
+  }
+}
+
+// A tap anywhere that is not the popup and not another word of the English row
+// puts it away. The word itself is exempt because tapping one word after
+// another is the reader working down a sentence, and closing in between would
+// flash the card off and on.
+function onDocClick(e) {
+  if (!enPop.visible) return
+  if (e.target?.closest?.('.en-pop') || e.target?.closest?.('.enw')) return
+  closeEnPop()
 }
 
 function closePanel() {
@@ -521,6 +741,13 @@ const progress = computed(() => {
 <template>
   <div class="shell">
     <TopBar :crumbs="crumbs" :show-nav="false">
+      <!-- The bar's own field leads to the search page; here it is replaced by
+           a search over the book that is open, with the results under the
+           field. It is a tool inside the reader, so it is bounded by the width
+           of the field: it never takes over the bar or the reading column. -->
+      <template #search>
+        <ReaderSearch @goto="jumpTo" />
+      </template>
       <template #actions>
         <!-- On a phone the two directories live here, where a reader looks for
              them, rather than in a bar at the foot of the screen next to the
@@ -639,6 +866,16 @@ const progress = computed(() => {
               </div>
             </div>
 
+            <!-- The head of the window. A fixed 1px box: whatever it draws is
+                 absolutely positioned inside it, so a load in progress cannot
+                 change the height of the content and put the anchoring
+                 arithmetic out by the height of a pill. -->
+            <div ref="sentinelTop" class="edge-sentinel">
+              <span v-if="R.loadingPrev" class="edge-note">
+                <Loader2 :size="12" class="spin" />正在载入前面的内容…
+              </span>
+            </div>
+
             <SegmentCard
               v-for="seg in R.segments"
               :key="seg.seq"
@@ -658,6 +895,7 @@ const progress = computed(() => {
               :active="false"
               @pick="pick"
               @unpick="removePick"
+              @en-word="onEnWord"
               @toggle-ref="R.toggleRefOpen($event.segment, $event.lang)"
               @toggle-para-ref="R.setRefShown($event.seqs, $event.lang, $event.on)"
               @save-translation="saveTranslation"
@@ -666,9 +904,10 @@ const progress = computed(() => {
               @need-auth="needAuth"
             />
 
-            <div ref="sentinel" style="height: 1px" />
-            <div v-if="R.loadingMore" style="display: grid; place-items: center; padding: 30px">
-              <Loader2 :size="18" class="spin" style="color: var(--meta)" />
+            <div ref="sentinelBottom" class="edge-sentinel">
+              <span v-if="R.loadingMore && !R.loadingPrev" class="edge-note is-below">
+                <Loader2 :size="12" class="spin" />正在载入后面的内容…
+              </span>
             </div>
             <div v-if="R.done && R.segments.length" class="endmark">
               <span class="eyebrow">— 此卷终 —</span>
@@ -688,7 +927,7 @@ const progress = computed(() => {
       <!-- right: contents. Collapsible like the rail on the left — a reader
            who is following one passage does not need three hundred headings
            taking a fifth of the screen. -->
-      <aside v-if="!isMobile" ref="tocCol" class="col col-toc">
+      <aside v-if="!isMobile" class="col col-toc">
         <button
           v-if="tocCollapsed"
           class="iconbtn"
@@ -715,24 +954,12 @@ const progress = computed(() => {
               </button>
             </span>
           </div>
-          <button
-            v-for="(t, i) in toc"
-            :key="i"
-            :ref="(el) => { if (i === activeTocIndex) activeTocEl = el }"
-            class="toc-item"
-            :class="{ 'is-active': i === activeTocIndex }"
-            :style="{
-              paddingLeft: 10 + tocStyle(t.level).indent + 'px',
-              fontSize: tocStyle(t.level).size + 'px',
-            }"
-            @click="goto(t.seq)"
-          >
-            <span class="tn">{{ t.name }}</span>
-            <span v-if="showTocRefs && R.tocRefFor(t.seq)" class="tref">{{
-              R.tocRefFor(t.seq)
-            }}</span>
-          </button>
-          <p v-if="!toc.length" class="caption" style="padding: 10px 0">本卷没有分节标题。</p>
+          <TocList
+            :entries="toc"
+            :active-index="activeTocIndex"
+            :ref-for="showTocRefs ? R.tocRefFor : null"
+            @goto="goto"
+          />
         </template>
       </aside>
 
@@ -765,6 +992,13 @@ const progress = computed(() => {
       />
     </div>
 
+    <!-- The English dictionary popup: one word of the 参考译文, its meanings,
+         and nothing else. It is not part of the stack above — there is only one
+         of it, replacing its contents is what tapping the next word does, and
+         any click elsewhere, Escape or a Pāḷi lookup puts it away. A glance
+         does not need a window manager. -->
+    <EnWordPopup :popup="enPop" @close="closeEnPop" />
+
     <!-- mobile: contents drawer -->
     <template v-if="isMobile">
       <div v-if="tocOpen" class="scrim" @click="tocOpen = false" />
@@ -775,22 +1009,17 @@ const progress = computed(() => {
             <X :size="16" />
           </button>
         </div>
-        <div style="overflow-y: auto; padding: 0 10px 30px">
-          <button
-            v-for="(t, i) in toc"
-            :key="i"
-            class="toc-item"
-            :class="{ 'is-active': i === activeTocIndex }"
-            :style="{
-              paddingLeft: 10 + tocStyle(t.level).indent + 'px',
-              fontSize: tocStyle(t.level).size + 'px',
-            }"
-            @click="goto(t.seq)"
-          >
-            <span class="tn">{{ t.name }}</span>
-            <span v-if="R.tocRefFor(t.seq)" class="tref">{{ R.tocRefFor(t.seq) }}</span>
-          </button>
-        </div>
+        <!-- Same list as the desktop rail, so it opens already scrolled to the
+             chapter being read. It did not before: the drawer was written as a
+             second copy of the markup, and the copy that follows the reader was
+             the other one. -->
+        <TocList
+          style="padding: 0 10px 30px"
+          :entries="toc"
+          :active-index="activeTocIndex"
+          :ref-for="R.tocRefFor"
+          @goto="goto"
+        />
       </aside>
 
       <!-- mobile: the word panel as a bottom sheet -->
@@ -967,6 +1196,39 @@ const progress = computed(() => {
   box-shadow: var(--whisper);
   font-size: 12px;
   color: var(--muted);
+}
+/* The two ends of the loaded window.
+   1px tall whatever is happening, and the note that appears while a load is in
+   flight is taken out of the flow and hung outside it. This is not decoration:
+   a prepend (and a trim from the head) is anchored by measuring the scroller
+   before and after, so an indicator that changed the height of the content
+   would be subtracted from the reader's place in the text and then given back a
+   moment later — the text would jump by the height of a pill, twice. The old
+   bottom spinner was 78px of ordinary flow, which is exactly that bug. */
+.edge-sentinel {
+  position: relative;
+  height: 1px;
+}
+.edge-note {
+  position: absolute;
+  bottom: 5px;
+  left: 50%;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 12px;
+  transform: translateX(-50%);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface);
+  box-shadow: var(--whisper);
+  font-size: 12px;
+  color: var(--muted);
+  white-space: nowrap;
+}
+.edge-note.is-below {
+  top: 5px;
+  bottom: auto;
 }
 .bookhead {
   padding: 8px 4px 22px;

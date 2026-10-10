@@ -2,6 +2,7 @@ import { defineStore } from 'pinia'
 import { useSettings } from './settings'
 import { nextTick } from 'vue'
 import { api } from '../api'
+import { PAGE, MAX_SEGMENTS, anchorShift, trimPlan } from '../utils/window'
 
 // Reader state.
 //
@@ -9,8 +10,9 @@ import { api } from '../api'
 // for every reader and comes straight from a cached endpoint. The marks part
 // is the signed-in reader's own and is fetched separately, so a guest can read
 // the whole canon without a session.
-
-const PAGE = 60
+//
+// PAGE (how much one request carries) now lives with the window's other
+// arithmetic, in utils/window.js.
 
 // The rule for whether a translation is shown: an explicit per-sentence
 // override if the reader made one, otherwise the setting. Defined once, here,
@@ -19,6 +21,14 @@ function settingsDefaultOn() {
   return useSettings().refDefaultOn
 }
 
+// The scrolling element the window is anchored to.
+//
+// A DOM node in a module binding rather than in state: Pinia would make it
+// reactive, and a Proxy wrapped around an element is a performance trap and a
+// comparison hazard. The reader binds it when it mounts; `scroller()` falls back
+// to the class name so a jump still works before the binding happens.
+let scrollerEl = null
+
 export const useReader = defineStore('reader', {
   state: () => ({
     bookId: '',
@@ -26,11 +36,13 @@ export const useReader = defineStore('reader', {
     toc: [],
     segments: [],
     total: 0,
-    done: false,
-    // The seq the loaded window starts at. Not always 1: a jump into the middle
-    // of a long book loads that window directly rather than paging to it, so
-    // "where the next page starts" is this plus what is already loaded.
-    windowFrom: 1,
+    // Reached the far end of the book. Two flags now, not one: the loaded
+    // window has two ends and either can reach the edge of the book
+    // independently — after a jump into the middle neither has.
+    doneStart: true,
+    doneEnd: false,
+    // Which way a request is in flight, so the two ends can say so separately.
+    loadingPrev: false,
     // The segment a jump is currently paging towards, 0 when none.
     jumpingTo: 0,
     // Which published translations the reader has opened, per segment and per
@@ -72,6 +84,15 @@ export const useReader = defineStore('reader', {
   }),
 
   getters: {
+    // The window's two ends, derived from what is actually loaded rather than
+    // tracked beside it: a separate counter drifts the first time an action
+    // forgets to write it, and the drift shows up as a gap in the text.
+    windowFrom: (s) => (s.segments.length ? s.segments[0].seq : 1),
+    windowTo: (s) => (s.segments.length ? s.segments[s.segments.length - 1].seq : 0),
+    // Whether the end of the book is on screen. Was `done`; the name is kept
+    // because the endmark means the end of the book, not the end of anything
+    // that happens to be loaded.
+    done: (s) => s.doneEnd,
     picksFor: (s) => (seg, word) => s.picks[`${seg}:${word}`] || [],
     // The compound split the reader settled on, if any. It lives among the
     // picks because it is the same kind of assertion about the same word.
@@ -110,8 +131,8 @@ export const useReader = defineStore('reader', {
         this.notes = {}
         this.translations = {}
         this.refs = {}
-        this.done = false
-        this.windowFrom = 1
+        this.doneStart = true
+        this.doneEnd = false
         this.look = null
         this.panelOpen = false
       }
@@ -124,7 +145,10 @@ export const useReader = defineStore('reader', {
           this.tocRefs = b.tocRefs || {}
           this.total = seg.total || 0
           this.segments = seg.items || []
-          this.done = !!seg.done
+          // The first window starts at the first segment, so the near end of the
+          // book is behind the reader before they have scrolled at all.
+          this.doneStart = true
+          this.doneEnd = !!seg.done || this.segments.length === 0
           await this.loadMarks(1, this.segments.length ? this.segments[this.segments.length - 1].seq : PAGE)
         }
       } catch (e) {
@@ -135,23 +159,139 @@ export const useReader = defineStore('reader', {
       if (opts.seq) this.scrollToSeq(opts.seq)
     },
 
+    // The element the window is anchored to. The reader binds it on mount.
+    bindScroller(el) {
+      scrollerEl = el || null
+    },
+
+    scroller() {
+      if (scrollerEl) return scrollerEl
+      // A jump can happen before the binding — `open()` is called from a
+      // watcher — so fall back to the class the column always carries.
+      if (typeof document === 'undefined' || !document.querySelector) return null
+      return document.querySelector('.col-read')
+    },
+
+    // --- extending the window, in either direction -----------------------
+    //
+    // The reader is a contiguous run of segments with two ends, and either end
+    // can be extended. Before this there was only a forward path: `loadMore`
+    // appended, and `loadAt` replaced the window with one starting twenty
+    // segments above its target. So after any jump there were exactly twenty
+    // segments above the reader and nothing behind them — scrolling up simply
+    // ran out, which is what the owner saw on the desktop, and on a phone the
+    // same missing path showed as "it stopped loading".
+
     async loadMore() {
-      if (this.loadingMore || this.done || !this.bookId) return
+      if (this.loadingMore || this.doneEnd || !this.bookId || !this.segments.length) return false
       this.loadingMore = true
+      let ok = false
       try {
-        const from = this.windowFrom + this.segments.length
+        const from = this.windowTo + 1
         const seg = await api.segments(this.bookId, from, PAGE)
         const items = seg.items || []
         if (items.length) {
           this.segments.push(...items)
           await this.loadMarks(from, items[items.length - 1].seq)
         }
-        this.done = !!seg.done || items.length === 0
+        if (seg.total) this.total = seg.total
+        this.doneEnd = !!seg.done || items.length === 0
+        ok = true
       } catch (e) {
         this.error = e.message || '加载失败'
       } finally {
         this.loadingMore = false
       }
+      // Moving forward, so the run being left behind is the head.
+      await this.trim('head')
+      return ok
+    },
+
+    // Extend the window at the front.
+    //
+    // Everything here exists to keep one promise: the line under the reader's
+    // eyes does not move. Adding segments above the viewport pushes all of it
+    // down by exactly the height that was added, so the same number of pixels
+    // is put back into scrollTop after Vue has painted. Measured, not assumed —
+    // a prepend without it throws the reader a whole page up the text.
+    async loadPrev() {
+      if (this.loadingMore || this.doneStart || !this.bookId || !this.segments.length) return false
+      const col = this.scroller()
+      const before = col ? col.scrollHeight : 0
+      this.loadingMore = true
+      this.loadingPrev = true
+      let ok = false
+      try {
+        const head = this.segments[0].seq
+        // The page that ends just before the window: the server returns rows
+        // with seq >= from, so asking for one fewer than the window start gives
+        // exactly the run that is missing, with no overlap to de-duplicate.
+        const from = Math.max(1, head - PAGE)
+        const count = head - from
+        const seg = await api.segments(this.bookId, from, count)
+        const items = seg.items || []
+        if (items.length) {
+          this.segments.unshift(...items)
+          await this.loadMarks(items[0].seq, items[items.length - 1].seq)
+          if (col) {
+            await nextTick()
+            col.scrollTop += anchorShift(before, col.scrollHeight)
+          }
+        }
+        if (seg.total) this.total = seg.total
+        this.doneStart = from <= 1 || items.length === 0
+        ok = true
+      } catch (e) {
+        this.error = e.message || '加载失败'
+      } finally {
+        this.loadingMore = false
+        this.loadingPrev = false
+      }
+      // Moving backward, so the run being left behind is the tail.
+      await this.trim('tail')
+      return ok
+    },
+
+    // Drop what has gone out of reach.
+    //
+    // Without this a reader who scrolls an 18,753-segment book ends up with
+    // 18,753 segments in the DOM. The cap is MAX_SEGMENTS; which end is dropped
+    // is decided by `prefer` (the end the reader is moving away from) and by
+    // `trimPlan`, which will not drop the segment they are looking at nor the
+    // context around it. What it costs: turning round and going back re-fetches
+    // the run that was dropped, which is one request.
+    //
+    // A trim from the head moves the text exactly as a prepend does, so it is
+    // anchored the same way — scrollHeight shrinks and scrollTop follows it
+    // down. A trim from the tail moves nothing and is not touched.
+    async trim(prefer) {
+      const col = this.scroller()
+      for (let round = 0; round < 4; round++) {
+        const plan = trimPlan(this.segments.length, this.activeIndex(), MAX_SEGMENTS, prefer)
+        if (!plan.head && !plan.tail) return
+        const before = col ? col.scrollHeight : 0
+        if (plan.head) {
+          this.segments.splice(0, plan.head)
+          // What was above is no longer loaded, so there is no longer anything
+          // known to be behind the window.
+          this.doneStart = false
+        }
+        if (plan.tail) {
+          this.segments.splice(this.segments.length - plan.tail, plan.tail)
+          this.doneEnd = false
+        }
+        if (col && plan.head) {
+          await nextTick()
+          col.scrollTop += anchorShift(before, col.scrollHeight)
+        }
+      }
+    },
+
+    // Where the reader is, as an index into the loaded window. -1 when the
+    // window has been replaced under them and they are somewhere else.
+    activeIndex() {
+      const i = this.segments.findIndex((s) => s.seq === this.activeSegment)
+      return i
     },
 
     // Marks arrive as flat arrays and are indexed by anchor here, once, so the
@@ -160,20 +300,26 @@ export const useReader = defineStore('reader', {
     //
     // Paging was the whole cost of a contents click: one round trip per 60
     // segments, so a heading near the end of a long book took hundreds of them
-    // and the reader waited a minute. One request answers it. The window starts
-    // a little above the target so the reader arrives with a little context and
-    // can scroll up.
+    // and the reader waited a minute. One request answers it.
+    //
+    // The target is put in the MIDDLE of the window, not twenty segments from
+    // its head. Twenty was chosen when the window could only grow forward, so
+    // the twenty were all the context a reader could ever get. Now that both
+    // ends extend, the useful thing is room on both sides: the reader lands
+    // with half a page behind them and half in front, and whichever way they
+    // turn, the run they need is already there or one request away.
     async loadAt(seq) {
       if (!this.bookId) return
-      const from = Math.max(1, (seq || 1) - 20)
+      const from = Math.max(1, (seq || 1) - Math.floor(PAGE / 2))
       this.loadingMore = true
       try {
         const seg = await api.segments(this.bookId, from, PAGE)
         this.segments = seg.items || []
-        this.windowFrom = from
-        this.done = !!seg.done || this.segments.length === 0
+        if (seg.total) this.total = seg.total
+        this.doneStart = from <= 1
+        this.doneEnd = !!seg.done || this.segments.length === 0
         if (this.segments.length) {
-          await this.loadMarks(from, this.segments[this.segments.length - 1].seq)
+          await this.loadMarks(this.segments[0].seq, this.segments[this.segments.length - 1].seq)
         }
       } catch (e) {
         this.error = e.message || '加载失败'
@@ -334,6 +480,11 @@ export const useReader = defineStore('reader', {
         if (!document.querySelector(`[data-seq="${seq}"]`)) {
           await this.loadAt(seq)
         }
+        // The reader asked for this segment, so that is where they are, whatever
+        // the scrollspy would infer from the first paint. Setting it here is
+        // what keeps the progress readout and the contents highlight in step
+        // with a jump that lands mid-window; the scroll handler then takes over.
+        this.activeSegment = seq
         // The window grows by whole pages, so the target is usually well above
         // the bottom; wait for Vue to paint it before measuring.
         await nextTick()
