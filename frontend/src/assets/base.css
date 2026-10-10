@@ -148,6 +148,10 @@
   --fast: 150ms cubic-bezier(0.2, 0, 0, 1);
   --base: 200ms cubic-bezier(0.2, 0, 0, 1);
 
+  /* Registered so it can be animated. Everything that depends on the bar's
+     height — the reading column's own height, the space the bar gives back —
+     reads this one value, so they move together instead of the bar sliding away
+     and the page snapping up behind it. */
   --topbar-h: 56px;
   --rail-w: 268px;
   /* The two rails are sized as a pair. The left is the narrower of the two and
@@ -1307,10 +1311,17 @@ svg {
    Layout
    ========================================================================== */
 
+@property --topbar-h {
+  syntax: "<length>";
+  inherits: true;
+  initial-value: 56px;
+}
+
 .shell {
   display: flex;
   flex-direction: column;
   min-height: 100vh;
+  transition: --topbar-h 220ms cubic-bezier(0.22, 0.61, 0.36, 1);
 }
 /* Slid away by 顶栏随滚动收起 (see ReaderView's trackBar). It slides rather
    than unmounts so the transition has something to move and the buttons keep
@@ -1319,17 +1330,26 @@ svg {
   position: sticky;
   top: 0;
   z-index: 30;
-  transition: transform 220ms cubic-bezier(0.22, 0.61, 0.36, 1);
+  /* Its own height stays put — it is the space it occupies in the layout, not
+     the bar's own box, that shrinks to nothing. */
+  height: 56px;
+  transition: transform 220ms cubic-bezier(0.22, 0.61, 0.36, 1),
+    margin-bottom 220ms cubic-bezier(0.22, 0.61, 0.36, 1);
   display: flex;
   align-items: center;
   gap: 14px;
-  height: var(--topbar-h);
   padding: 0 12px;
   background: var(--surface);
   border-bottom: 1px solid var(--border);
 }
 .topbar.is-hidden {
   transform: translateY(-100%);
+  /* The space goes back too, and it goes back over the same 220ms — the reading
+     column grows into it as the bar leaves, rather than the page snapping up
+     behind it. A sticky bar keeps its place in the flow, so sliding it away
+     alone left a blank band across the top; the reader asked for more page, not
+     for the bar to become invisible. */
+  margin-bottom: calc(var(--topbar-h) - 56px);
 }
 /* A bar that slides on every scroll is exactly what this preference is for, but
    it is also exactly what a reader who asked not to be moved meant. */

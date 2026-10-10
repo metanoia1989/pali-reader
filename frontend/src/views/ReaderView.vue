@@ -221,6 +221,24 @@ function trackBar(col) {
   else if (dy > BAR_DIRECTION_SLACK) R.barHidden = true
 }
 
+// The bar's height is one variable the whole shell reads, so putting it on the
+// document element is what makes the reading column grow into the space as the
+// bar leaves — the slide and the reclaim are one movement instead of two.
+//
+// It is set here rather than derived in CSS because the value has to be
+// animatable: --topbar-h is registered with @property so it can be transitioned,
+// and a rule that merely toggled it between two literals would snap.
+// Removed on the way out so the next view does not inherit a collapsed bar.
+watch(
+  () => R.barHidden,
+  (hidden) => {
+    document.documentElement.style.setProperty('--topbar-h', hidden ? '0px' : '56px')
+  },
+)
+onBeforeUnmount(() => {
+  document.documentElement.style.removeProperty('--topbar-h')
+})
+
 function onScroll() {
   if (ticking) return
   ticking = true
