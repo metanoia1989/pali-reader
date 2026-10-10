@@ -1,0 +1,490 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>三藏阅读器 · 搜索交互</title>
+<style>
+:root{
+  --paper:#f5f4ed; --ivory:#faf9f5; --ink:#1B365D;
+  --sand:#e8e6dc; --wash:#e4ecf5; --wash2:#d6e1ee;
+  --line:#e4e2d7; --line2:#dcd9cc;
+  --fg:#141413; --fg2:#3d3d3a; --meta:#6b6a64;
+  --sans:"Helvetica Neue",Helvetica,Arial,"Songti SC","Source Han Serif SC","Noto Serif CJK SC",sans-serif;
+  --serif:"Iowan Old Style",Palatino,Georgia,"Songti SC","Source Han Serif SC",serif;
+  --sh:0 4px 24px rgba(0,0,0,.05);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--paper);color:var(--fg);font:400 13px/1.6 var(--sans);overflow-x:auto;-webkit-font-smoothing:antialiased}
+b{font-weight:500}
+main{width:1440px;padding:34px 40px 64px}
+h1{font:500 20px/1.3 var(--sans);letter-spacing:.01em}
+.lede{font:400 12.5px/1.8 var(--sans);color:var(--meta);margin-top:8px;max-width:96ch}
+h2{font:500 12px/1.3 var(--sans);letter-spacing:.08em;color:var(--meta);text-transform:uppercase}
+h2 + p.sub{font:400 12.5px/1.8 var(--sans);color:var(--meta);margin-top:7px;max-width:96ch}
+section{margin-top:40px;padding-top:22px;border-top:1px solid var(--line)}
+.tag{display:inline-block;padding:1px 7px;border-radius:3px;background:var(--sand);color:var(--fg2);font:400 11px/1.7 var(--sans)}
+
+/* ── 顶栏 ─────────────────────────────────────────────────── */
+.stage{position:relative;min-height:480px;margin-top:16px;border-radius:8px;overflow:hidden;box-shadow:0 0 0 1px var(--line)}
+.stage.short{min-height:230px}
+.bar{position:relative;display:grid;grid-template-columns:1fr 560px 1fr;align-items:center;height:56px;padding:0 20px;background:var(--ivory);border-bottom:1px solid var(--line)}
+.brand{font:500 14px/1 var(--sans);color:var(--fg);letter-spacing:.01em}
+.brand span{font-weight:400;color:var(--meta);margin-left:9px;font-size:12.5px}
+.acct{display:flex;align-items:center;gap:8px;justify-content:flex-end}
+.abtn{height:28px;padding:0 10px;border-radius:5px;background:transparent;border:0;box-shadow:inset 0 0 0 1px var(--line);font:400 12.5px/1 var(--sans);color:var(--fg2);cursor:pointer}
+.abtn:hover{background:var(--sand)}
+.ava{display:grid;place-items:center;width:28px;height:28px;border-radius:50%;background:var(--sand);color:var(--fg2);font:500 12px/1 var(--sans)}
+
+/* ── 字段 ─────────────────────────────────────────────────── */
+.fw{position:relative;width:560px}
+.field{display:flex;align-items:center;height:36px;padding-left:11px;background:var(--paper);border-radius:6px;box-shadow:inset 0 0 0 1px var(--line)}
+.field.focus{box-shadow:inset 0 0 0 1px var(--ink);outline:2px solid var(--ink);outline-offset:1px}
+.sico{display:grid;place-items:center;width:16px;height:16px;color:var(--meta);flex:none}
+.q{flex:1;min-width:0;height:34px;border:0;outline:0;background:transparent;font:400 13.5px/1 var(--sans);color:var(--fg);padding:0 10px}
+.q::placeholder{color:var(--meta)}
+.rule{width:1px;height:20px;background:var(--line);flex:none}
+.mode{display:flex;align-items:center;gap:5px;height:26px;margin:0 5px;padding:0 8px;border:0;border-radius:4px;background:var(--sand);color:var(--fg);font:500 12px/1 var(--sans);cursor:pointer;flex:none}
+.mode:hover{background:var(--wash)}
+.mode.wide{background:var(--wash);color:var(--ink)}
+.mode.wide:hover{background:var(--wash2)}
+.caret{color:currentColor}
+.prog{position:absolute;left:0;right:0;bottom:-1px;height:2px;background:var(--wash2);overflow:hidden;border-radius:0 0 6px 6px}
+.prog i{display:block;width:38%;height:100%;background:var(--ink)}
+
+/* ── 模式菜单 ─────────────────────────────────────────────── */
+.menu{position:absolute;top:44px;right:0;width:308px;padding:6px;background:var(--ivory);border-radius:8px;box-shadow:0 0 0 1px var(--line),var(--sh);z-index:30}
+.mhead{padding:7px 10px 4px;font:500 10.5px/1 var(--sans);letter-spacing:.08em;color:var(--meta);text-transform:uppercase}
+.mrow{display:flex;align-items:center;gap:10px;width:100%;padding:8px 10px;border:0;border-radius:5px;background:transparent;text-align:left;cursor:pointer}
+.mrow:hover{background:var(--wash)}
+.mrow .mt{flex:1;min-width:0}
+.mrow .mt b{display:block;font:500 13px/1.5 var(--sans);color:var(--fg)}
+.mrow .mt small{display:block;font:400 11.5px/1.5 var(--sans);color:var(--meta)}
+.mrow kbd{font:400 10.5px/1 var(--sans);color:var(--meta);padding:2px 5px;border-radius:3px;box-shadow:inset 0 0 0 1px var(--line)}
+.mrow[aria-current="true"]{background:var(--wash)}
+.mrow[aria-current="true"] .mt b{color:var(--ink)}
+.mrow[aria-current="true"] .mt small{color:var(--fg2)}
+
+/* ── 结果面板 ─────────────────────────────────────────────── */
+.panel{position:absolute;top:44px;left:0;width:660px;background:var(--ivory);border-radius:8px;box-shadow:0 0 0 1px var(--line),var(--sh);overflow:hidden;z-index:30}
+.panel.flow{position:static;width:100%;margin-top:14px}
+.panel.dim{opacity:.55}
+.phead{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:9px 13px;border-bottom:1px solid var(--line);font:400 11.5px/1.5 var(--sans);color:var(--meta)}
+.phead b{font-weight:500;color:var(--fg2)}
+.res{display:flex;align-items:flex-start;gap:14px;padding:9px 13px;border-bottom:1px solid var(--line);cursor:pointer}
+.res:last-of-type{border-bottom:0}
+.res:hover{background:var(--wash)}
+.res:hover .rp{color:var(--ink)}
+.rp{flex:1;min-width:0}
+.rp i{display:block;font:400 15px/1.65 var(--serif);color:var(--fg);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-style:normal}
+.rp em{display:block;font:400 12.5px/1.7 var(--sans);color:var(--meta);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-style:normal;margin-top:1px}
+.rloc{flex:none;text-align:right;font:400 11.5px/1.65 var(--sans);color:var(--meta);white-space:nowrap;max-width:150px}
+.rloc .seg{display:block;color:var(--fg2)}
+mark{background:var(--wash);color:var(--ink);border-radius:2px;padding:0 1px}
+.panel.tr .rp i{font:400 14px/1.7 var(--sans)}
+
+/* ── 页脚 / 说明带 ───────────────────────────────────────── */
+.pfoot{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:9px 13px;background:var(--paper);font:400 11.5px/1.5 var(--sans);color:var(--meta);border-top:1px solid var(--line)}
+.link{color:var(--ink);font-weight:500;cursor:pointer}
+.link:hover{background:var(--wash);border-radius:3px}
+.note{padding:9px 13px;background:var(--paper);border-top:1px solid var(--line);font:400 11.5px/1.7 var(--sans);color:var(--meta)}
+.note b{font-weight:500;color:var(--fg2)}
+
+/* ── 阅读栏 ───────────────────────────────────────────────── */
+.reader{display:grid;grid-template-columns:190px 720px 190px;gap:40px;justify-content:center;padding:26px 0 40px}
+.rail{display:flex;flex-direction:column;gap:9px;padding-top:4px}
+.rail span{font:400 12px/1.5 var(--sans);color:var(--meta);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rail .on{color:var(--ink);font-weight:500}
+.rail.r2{text-align:right;align-items:flex-end}
+.pali{font:400 19.5px/1.8 var(--serif);color:var(--fg)}
+.zh{font:400 13px/1.9 var(--sans);color:var(--meta);margin-top:10px}
+.pali + .pali{margin-top:14px}
+
+/* ── 四种模式 ─────────────────────────────────────────────── */
+.modes{display:grid;grid-template-columns:repeat(2,1fr);gap:22px;margin-top:18px}
+.mcard{background:var(--ivory);border-radius:8px;box-shadow:0 0 0 1px var(--line)}
+.mcard .bar{border-radius:8px 8px 0 0}
+.mcard .field{background:var(--ivory);box-shadow:inset 0 0 0 1px var(--line)}
+
+/* ── 移动端 ───────────────────────────────────────────────── */
+.mobrow{display:flex;gap:40px;align-items:flex-start;margin-top:18px}
+.phone{position:relative;width:390px;height:844px;background:var(--paper);border-radius:26px;overflow:hidden;box-shadow:0 0 0 1px var(--line),var(--sh);flex:none}
+.pbar{display:flex;align-items:center;gap:8px;height:56px;padding:0 12px;background:var(--ivory);border-bottom:1px solid var(--line)}
+.pfield{flex:1;min-width:0;display:flex;align-items:center;height:36px;padding-left:10px;background:var(--paper);border-radius:6px;box-shadow:inset 0 0 0 1px var(--line)}
+.pmode{display:flex;align-items:center;gap:4px;height:26px;margin-right:5px;padding:0 7px;border:0;border-radius:4px;background:var(--sand);color:var(--fg);font:500 11.5px/1 var(--sans);cursor:pointer;flex:none}
+.pbody{padding:20px 20px 0}
+.pbody .pali{font-size:19.5px}
+.sheet{position:absolute;left:0;right:0;bottom:0;max-height:560px;background:var(--ivory);border-radius:16px 16px 0 0;box-shadow:0 -1px 0 var(--line),0 -4px 24px rgba(0,0,0,.05)}
+.grab{width:36px;height:4px;border-radius:2px;background:var(--line2);margin:9px auto 4px}
+.chips{display:flex;gap:6px;padding:8px 12px 12px;border-bottom:1px solid var(--line)}
+.chip{flex:none;display:flex;align-items:center;height:28px;padding:0 11px;border:0;border-radius:14px;background:var(--paper);box-shadow:inset 0 0 0 1px var(--line);font:400 12.5px/1 var(--sans);color:var(--fg2);cursor:pointer}
+.chip[aria-pressed="true"]{background:var(--ink);color:var(--ivory);font-weight:500;box-shadow:none}
+.sheet .res{padding:10px 14px}
+.sheet .rp i{font-size:15px}
+.why{font:400 12.5px/1.9 var(--sans);color:var(--meta);max-width:44ch}
+.why b{font-weight:500;color:var(--fg)}
+
+/* ── 未画状态 / 高亮 ─────────────────────────────────────── */
+.cards{display:grid;grid-template-columns:repeat(4,1fr);gap:18px;margin-top:18px}
+.card{background:var(--ivory);border-radius:8px;box-shadow:0 0 0 1px var(--line);overflow:hidden;display:flex;flex-direction:column}
+.card .ct{padding:10px 13px;border-bottom:1px solid var(--line);font:500 12px/1.4 var(--sans);color:var(--fg)}
+.card .cb{padding:14px 13px;flex:1}
+.card .pfoot{margin-top:auto}
+.hl{display:grid;grid-template-columns:repeat(2,1fr);gap:22px;margin-top:18px;align-items:start}
+.hlbox{background:var(--ivory);border-radius:8px;box-shadow:0 0 0 1px var(--line);padding:16px}
+.hlbox p{font:400 15px/1.85 var(--serif);color:var(--fg)}
+.hlbox .k{font:400 11.5px/1.7 var(--sans);color:var(--meta);margin-top:10px}
+.fold{display:flex;flex-wrap:wrap;gap:6px;margin-top:12px}
+.fold span{font:400 12px/1 var(--sans);color:var(--fg2);padding:4px 8px;border-radius:3px;background:var(--sand)}
+.paras{display:grid;grid-template-columns:1fr 1fr;gap:36px;margin-top:18px}
+.paras p{font:400 13px/1.95 var(--sans);color:var(--fg2);max-width:64ch}
+.paras p b{font-weight:500;color:var(--fg)}
+</style>
+</head>
+<body>
+<main>
+
+  <h1>搜索交互 · 一个字段，四种范围</h1>
+  <p class="lede">1440 顶栏，按实际尺寸画的。下面的字段有四种状态，全部在真实的顶栏里出现——左边是站名，右边是账号菜单，字段只有 560px 的预算。移动端在 390px，单独一节。</p>
+
+  <!-- ── 1 · 字段的四种状态 ──────────────────────────────── -->
+  <section data-od-id="field-states">
+    <h2>1 · 字段的四种状态</h2>
+
+    <div class="stage short" data-od-id="state-empty">
+      <div class="bar">
+        <span class="brand">巴利三藏<span>相应部 12.2</span></span>
+        <div class="fw">
+          <div class="field">
+            <span class="sico"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"><path d="M2.4 4.4h11.2M2.4 8h11.2M2.4 11.6h7.4"/></svg></span>
+            <input class="q" placeholder="在本章内搜索" aria-label="搜索">
+            <span class="rule"></span>
+            <button class="mode">本章<svg class="caret" width="8" height="5" viewBox="0 0 8 5" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><path d="m1 1 3 3 3-3"/></svg></button>
+          </div>
+        </div>
+        <div class="acct"><button class="abtn">书签</button><button class="abtn">设置</button><span class="ava">M</span></div>
+      </div>
+      <div class="reader">
+        <div class="rail"><span class="on">相应部 12.2</span><span>缘起</span><span>第 3 段</span><span>第 4 段</span></div>
+        <div class="col">
+          <p class="pali">Tatra kho bhagavā pañcavaggiye bhikkhū āmantesi — anuttaraṃ dhammacakkaṃ pavattitaṃ, appaṭivattiyaṃ samaṇena vā brāhmaṇena vā devena vā mārena vā.</p>
+          <p class="zh">世尊对五比丘说：无上法轮已转起，不为沙门、婆罗门、天、魔所逆转。</p>
+        </div>
+        <div class="rail r2"><span>段 1</span><span class="on">段 3</span><span>段 7</span><span>段 12</span></div>
+      </div>
+    </div>
+    <p class="lede"><b>空 · 未聚焦。</b>字段左端的小图示说明范围，中间是占位符，右端是「当前范围」按钮。⌘K 提示整条删掉了——它占了最贵的位置，却什么都没说。</p>
+
+    <div class="stage" data-od-id="state-menu">
+      <div class="bar">
+        <span class="brand">巴利三藏<span>相应部 12.2</span></span>
+        <div class="fw">
+          <div class="field focus">
+            <span class="sico"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"><path d="M2.4 4.4h11.2M2.4 8h11.2M2.4 11.6h7.4"/></svg></span>
+            <input class="q" placeholder="在本章内搜索" aria-label="搜索">
+            <span class="rule"></span>
+            <button class="mode" aria-expanded="true">本章<svg class="caret" width="8" height="5" viewBox="0 0 8 5" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><path d="m1 1 3 3 3-3"/></svg></button>
+          </div>
+          <div class="menu" data-od-id="mode-menu">
+            <p class="mhead">搜索范围</p>
+            <button class="mrow" aria-current="true">
+              <span class="mt"><b>本章</b><small>相应部 12.2 · 只在当前章节内查找</small></span>
+              <kbd>⌥1</kbd>
+            </button>
+            <button class="mrow">
+              <span class="mt"><b>经文名</b><small>按标题与编号查目录</small></span>
+              <kbd>⌥2</kbd>
+            </button>
+            <button class="mrow">
+              <span class="mt"><b>巴利全文</b><small>整部三藏 · 按段返回</small></span>
+              <kbd>⌥3</kbd>
+            </button>
+            <button class="mrow">
+              <span class="mt"><b>译文</b><small>中译与英译 · 仅已下载经文</small></span>
+              <kbd>⌥4</kbd>
+            </button>
+          </div>
+        </div>
+        <div class="acct"><button class="abtn">书签</button><button class="abtn">设置</button><span class="ava">M</span></div>
+      </div>
+      <div class="reader">
+        <div class="rail"><span class="on">相应部 12.2</span><span>缘起</span><span>第 3 段</span></div>
+        <div class="col"><p class="pali">Tatra kho bhagavā pañcavaggiye bhikkhū āmantesi — anuttaraṃ dhammacakkaṃ pavattitaṃ, appaṭivattiyaṃ samaṇena vā brāhmaṇena vā.</p><p class="zh">世尊对五比丘说：无上法轮已转起，不为沙门、婆罗门所逆转。</p></div>
+        <div class="rail r2"><span>段 1</span><span class="on">段 3</span><span>段 7</span></div>
+      </div>
+    </div>
+    <p class="lede"><b>聚焦 · 模式菜单展开。</b>菜单贴着字段右端向下开，宽 308px，不遮住输入框本身。四行各带一句范围说明和快捷键，当前那行是淡墨底 + 墨蓝字——同一枚墨蓝，没有第二种颜色。</p>
+
+    <div class="stage" data-od-id="state-typing">
+      <div class="bar">
+        <span class="brand">巴利三藏<span>相应部 12.2</span></span>
+        <div class="fw">
+          <div class="field focus">
+            <span class="sico"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"><path d="M2.4 4.4h11.2M2.4 8h11.2M2.4 11.6h7.4"/></svg></span>
+            <input class="q" value="dhammacak" aria-label="搜索">
+            <span class="rule"></span>
+            <button class="mode" aria-expanded="true">本章<svg class="caret" width="8" height="5" viewBox="0 0 8 5" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><path d="m1 1 3 3 3-3"/></svg></button>
+            <span class="prog"><i></i></span>
+          </div>
+          <div class="panel dim" data-od-id="panel-typing">
+            <div class="phead"><span>正在检索「dhammacak」…</span><span>上一批结果</span></div>
+            <div class="res"><span class="rp"><i>Tatra kho bhagavā pañcavaggiye bhikkhū āmantesi</i><em>世尊对五比丘说</em></span><span class="rloc"><span class="seg">相应部 12.2</span>段 3</span></div>
+            <div class="res"><span class="rp"><i>Evaṃ me sutaṃ — ekaṃ samayaṃ bhagavā sāvatthiyaṃ viharati</i><em>如是我闻，一时世尊住舍卫城</em></span><span class="rloc"><span class="seg">相应部 12.2</span>段 1</span></div>
+          </div>
+        </div>
+        <div class="acct"><button class="abtn">书签</button><button class="abtn">设置</button><span class="ava">M</span></div>
+      </div>
+      <div class="reader">
+        <div class="rail"><span class="on">相应部 12.2</span><span>缘起</span><span>第 3 段</span></div>
+        <div class="col"><p class="pali">Tatra kho bhagavā pañcavaggiye bhikkhū āmantesi — anuttaraṃ dhammacakkaṃ pavattitaṃ, appaṭivattiyaṃ samaṇena vā brāhmaṇena vā.</p><p class="zh">世尊对五比丘说：无上法轮已转起，不为沙门、婆罗门所逆转。</p></div>
+        <div class="rail r2"><span>段 1</span><span class="on">段 3</span><span>段 7</span></div>
+      </div>
+    </div>
+    <p class="lede"><b>输入中。</b>旧结果留在原位、降到 55% 不透明度，字段下沿一条 2px 细线走进度。绝不先清空再填——清空会让面板跳一下，闪一次白。去抖 120ms，本章模式是内存里的，所以旧结果几乎不会真的被看到。</p>
+
+    <div class="stage" data-od-id="state-results">
+      <div class="bar">
+        <span class="brand">巴利三藏<span>相应部 12.2</span></span>
+        <div class="fw">
+          <div class="field focus">
+            <span class="sico"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"><path d="M2.4 4.4h11.2M2.4 8h11.2M2.4 11.6h7.4"/></svg></span>
+            <input class="q" value="bhagavā" aria-label="搜索">
+            <span class="rule"></span>
+            <button class="mode" aria-expanded="true">本章<svg class="caret" width="8" height="5" viewBox="0 0 8 5" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><path d="m1 1 3 3 3-3"/></svg></button>
+          </div>
+          <div class="panel" data-od-id="panel-chapter">
+            <div class="phead"><span><b>本章</b> · 相应部 12.2 缘起</span><span>3 处</span></div>
+            <div class="res"><span class="rp"><i>Tatra kho <mark>bhagavā</mark> pañcavaggiye bhikkhū āmantesi — anuttaraṃ dhammacakkaṃ pavattitaṃ</i><em>世尊对五比丘说：无上法轮已转起</em></span><span class="rloc"><span class="seg">相应部 12.2</span>段 3</span></div>
+            <div class="res"><span class="rp"><i>Evaṃ me sutaṃ — ekaṃ samayaṃ <mark>bhagavā</mark> sāvatthiyaṃ viharati jetavane</i><em>如是我闻，一时世尊住舍卫城祇树园</em></span><span class="rloc"><span class="seg">相应部 12.2</span>段 1</span></div>
+            <div class="res"><span class="rp"><i><mark>bhagavā</mark> antarā ca rājagahaṃ antarā ca nāḷandaṃ addhānamaggappaṭipanno</i><em>世尊在王舍城与那烂陀之间游行</em></span><span class="rloc"><span class="seg">相应部 12.2</span>段 7</span></div>
+            <div class="pfoot"><span>仅在本章（相应部 12.2）内查找</span><span class="link">改在巴利全文里搜「bhagavā」</span></div>
+          </div>
+        </div>
+        <div class="acct"><button class="abtn">书签</button><button class="abtn">设置</button><span class="ava">M</span></div>
+      </div>
+      <div class="reader">
+        <div class="rail"><span class="on">相应部 12.2</span><span>缘起</span><span>第 3 段</span></div>
+        <div class="col"><p class="pali">Tatra kho bhagavā pañcavaggiye bhikkhū āmantesi — anuttaraṃ dhammacakkaṃ pavattitaṃ, appaṭivattiyaṃ samaṇena vā brāhmaṇena vā.</p><p class="zh">世尊对五比丘说：无上法轮已转起，不为沙门、婆罗门所逆转。</p></div>
+        <div class="rail r2"><span>段 1</span><span class="on">段 3</span><span>段 7</span></div>
+      </div>
+    </div>
+    <p class="lede"><b>结果展开。</b>面板 660px，比字段宽——字段开口，面板是一张面。每行两行字：上排是经文原文（衬线，15px），下排是它对应的译文（无衬线，12.5px），右侧是落点。点一行，页面跳到那一段，面板收起，那一段在正文里高亮 2 秒。</p>
+  </section>
+
+  <!-- ── 2 · 四种模式 ────────────────────────────────────── -->
+  <section data-od-id="four-modes">
+    <h2>2 · 四种模式，真实内容</h2>
+    <p class="sub">格子里的字段和上面是同一个组件，只换了范围、图示、占位符和结果。注意「本章」的按钮是暖砂色，「经文名 / 巴利全文 / 译文」是淡墨底 + 墨蓝字——不用读字，颜色就告诉你这一步在搜整个藏还是只搜眼前这一章。</p>
+
+    <div class="modes">
+
+      <div class="mcard" data-od-id="mode-chapter">
+        <div class="bar">
+          <span class="brand">巴利三藏</span>
+          <div class="fw" style="width:380px">
+            <div class="field focus">
+              <span class="sico"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"><path d="M2.4 4.4h11.2M2.4 8h11.2M2.4 11.6h7.4"/></svg></span>
+              <input class="q" value="bhagavā" aria-label="搜索">
+              <span class="rule"></span>
+              <button class="mode">本章<svg class="caret" width="8" height="5" viewBox="0 0 8 5" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><path d="m1 1 3 3 3-3"/></svg></button>
+            </div>
+          </div>
+          <div class="acct"><span class="tag">相应部 12.2</span></div>
+        </div>
+        <div class="panel flow">
+          <div class="phead"><span><b>本章</b> · 相应部 12.2 缘起</span><span>3 处</span></div>
+          <div class="res"><span class="rp"><i>Tatra kho <mark>bhagavā</mark> pañcavaggiye bhikkhū āmantesi</i><em>世尊对五比丘说</em></span><span class="rloc"><span class="seg">相应部 12.2</span>段 3</span></div>
+          <div class="res"><span class="rp"><i>Evaṃ me sutaṃ — ekaṃ samayaṃ <mark>bhagavā</mark> sāvatthiyaṃ viharati</i><em>如是我闻，一时世尊住舍卫城</em></span><span class="rloc"><span class="seg">相应部 12.2</span>段 1</span></div>
+          <div class="res"><span class="rp"><i><mark>bhagavā</mark> antarā ca rājagahaṃ antarā ca nāḷandaṃ addhānamaggappaṭipanno</i><em>世尊在王舍城与那烂陀之间游行</em></span><span class="rloc"><span class="seg">相应部 12.2</span>段 7</span></div>
+          <div class="pfoot"><span>本地 · 无需网络</span><span class="link">扩大到巴利全文</span></div>
+        </div>
+      </div>
+
+      <div class="mcard" data-od-id="mode-title">
+        <div class="bar">
+          <span class="brand">巴利三藏</span>
+          <div class="fw" style="width:380px">
+            <div class="field focus">
+              <span class="sico"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3.6C6.8 2.8 5 2.5 3 2.6v9.8c2-.1 3.8.2 5 1 1.2-.8 3-1.1 5-1V2.6c-2-.1-3.8.2-5 1Z"/><path d="M8 3.6v9.8"/></svg></span>
+              <input class="q" value="suttaṃ" aria-label="搜索">
+              <span class="rule"></span>
+              <button class="mode wide">经文名<svg class="caret" width="8" height="5" viewBox="0 0 8 5" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><path d="m1 1 3 3 3-3"/></svg></button>
+            </div>
+          </div>
+          <div class="acct"><span class="tag">目录</span></div>
+        </div>
+        <div class="panel flow">
+          <div class="phead"><span><b>经文名</b> · 按标题与编号</span><span>21 部</span></div>
+          <div class="res"><span class="rp"><i>Mahāsatipaṭṭhāna<mark>suttaṃ</mark></i><em>大念处经 · 已有中译、英译</em></span><span class="rloc"><span class="seg">长部 22</span>3 译</span></div>
+          <div class="res"><span class="rp"><i>Satipaṭṭhāna<mark>suttaṃ</mark></i><em>念处经 · 已有中译</em></span><span class="rloc"><span class="seg">中部 10</span>1 译</span></div>
+          <div class="res"><span class="rp"><i>Dhammacakkappavattana<mark>suttaṃ</mark></i><em>转法轮经 · 已有中译、英译</em></span><span class="rloc"><span class="seg">相应部 56.11</span>2 译</span></div>
+          <div class="res"><span class="rp"><i>Mūlapariyāya<mark>suttaṃ</mark></i><em>根本法门经 · 尚无译文</em></span><span class="rloc"><span class="seg">中部 1</span>原文</span></div>
+          <div class="pfoot"><span>目录内 21 部匹配</span><span class="link">打开完整结果</span></div>
+        </div>
+      </div>
+
+      <div class="mcard" data-od-id="mode-pali">
+        <div class="bar">
+          <span class="brand">巴利三藏</span>
+          <div class="fw" style="width:380px">
+            <div class="field focus">
+              <span class="sico"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"><path d="M7 2.6a4.4 4.4 0 1 0 0 8.8 4.4 4.4 0 0 0 0-8.8Z"/><path d="M10.3 10.3 14 14"/></svg></span>
+              <input class="q" value="dhammacakkaṃ" aria-label="搜索">
+              <span class="rule"></span>
+              <button class="mode wide">巴利全文<svg class="caret" width="8" height="5" viewBox="0 0 8 5" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><path d="m1 1 3 3 3-3"/></svg></button>
+            </div>
+          </div>
+          <div class="acct"><span class="tag">整部三藏</span></div>
+        </div>
+        <div class="panel flow">
+          <div class="phead"><span><b>巴利全文</b> · 按段返回 · 每段一条</span><span>12 段 · 47 处</span></div>
+          <div class="res"><span class="rp"><i>anuttaraṃ <mark>dhammacakkaṃ</mark> pavattitaṃ, appaṭivattiyaṃ samaṇena vā brāhmaṇena vā</i><em>无上法轮已转起，不为沙门、婆罗门所逆转</em></span><span class="rloc"><span class="seg">相应部 56.11</span>段 12</span></div>
+          <div class="res"><span class="rp"><i>Anuttaraṃ <mark>dhammacakkaṃ</mark> pavattitaṃ, appaṭivattiyaṃ samaṇena vā</i><em>转起无上法轮，不为沙门、婆罗门所逆转</em></span><span class="rloc"><span class="seg">中部 141</span>段 4</span></div>
+          <div class="res"><span class="rp"><i>… anuttaraṃ <mark>dhammacakkaṃ</mark> pavattitaṃ, appaṭivattiyaṃ kenaci vā lokasmiṃ</i><em>无上法轮，世间无人能逆转</em></span><span class="rloc"><span class="seg">增支部 3.61</span>段 8</span></div>
+          <div class="res"><span class="rp"><i>Dhammacakkaṃ <mark>pavattitaṃ</mark> samaṇena vā brāhmaṇena vā</i><em>法轮已转起</em></span><span class="rloc"><span class="seg">长部 26</span>段 19</span></div>
+          <div class="res"><span class="rp"><i>anuttaraṃ <mark>dhammacakkaṃ</mark> pavatteti bhagavā</i><em>世尊转起无上法轮</em></span><span class="rloc"><span class="seg">律藏 · 大品</span>段 21</span></div>
+          <div class="pfoot"><span>显示 5 / 12 段 · 未下载的经文不在范围内</span><span class="link">打开完整结果（47 处）</span></div>
+        </div>
+      </div>
+
+      <div class="mcard" data-od-id="mode-translation">
+        <div class="bar">
+          <span class="brand">巴利三藏</span>
+          <div class="fw" style="width:380px">
+            <div class="field focus">
+              <span class="sico"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><path d="M1.6 3.6h6M4.6 1.9v1.7"/><path d="M6.6 3.6c0 3-2 5-5.2 5.8"/><path d="M2.8 6.2c.9 1.5 2.2 2.6 3.8 3.2"/><path d="M8.6 14.2 11.2 7.6l2.6 6.6M9.6 11.8h3.2"/></svg></span>
+              <input class="q" value="法轮" aria-label="搜索">
+              <span class="rule"></span>
+              <button class="mode wide">译文<svg class="caret" width="8" height="5" viewBox="0 0 8 5" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><path d="m1 1 3 3 3-3"/></svg></button>
+            </div>
+          </div>
+          <div class="acct"><span class="tag">中译 · 英译</span></div>
+        </div>
+        <div class="panel flow tr">
+          <div class="phead"><span><b>译文</b> · 中译与英译</span><span>9 处</span></div>
+          <div class="res"><span class="rp"><i>世尊于鹿野苑为五比丘转起无上<mark>法轮</mark>；此法轮不可为沙门、婆罗门所逆转。</i><em>相应部 56.11 · 段 12 · ePitaka 中译</em></span><span class="rloc"><span class="seg">中译</span>1 处</span></div>
+          <div class="res"><span class="rp"><i>…转起无上<mark>法轮</mark>，不为沙门、婆罗门所逆转，世间无人能逆转。</i><em>中部 141 · 段 4 · ePitaka 中译</em></span><span class="rloc"><span class="seg">中译</span>1 处</span></div>
+          <div class="res"><span class="rp"><i>The Blessed One set rolling the unsurpassed wheel of Dhamma at the Deer Park.</i><em>相应部 56.11 · 段 12 · ePitaka 英译 · 同段</em></span><span class="rloc"><span class="seg">英译</span>同段</span></div>
+          <div class="res"><span class="rp"><i>…无上<mark>法轮</mark>，世间任何人所不能逆转。</i><em>增支部 3.61 · 段 8 · ePitaka 中译</em></span><span class="rloc"><span class="seg">中译</span>1 处</span></div>
+          <div class="pfoot"><span>只覆盖已下载的 12 部经（全藏 84 部）</span><span class="link">下载全部后重搜</span></div>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ── 3 · 移动端 ──────────────────────────────────────── -->
+  <section data-od-id="mobile">
+    <h2>3 · 390px</h2>
+    <p class="sub">用底部抽屉（bottom sheet），不用字段下方的下拉。</p>
+    <div class="mobrow">
+      <div class="phone" data-od-id="phone-sheet">
+        <div class="pbar">
+          <span class="brand">巴利三藏</span>
+          <div class="pfield">
+            <span class="sico"><svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"><path d="M2.4 4.4h11.2M2.4 8h11.2M2.4 11.6h7.4"/></svg></span>
+            <input class="q" value="bhagavā" aria-label="搜索" style="font-size:13px">
+            <button class="pmode">本章<svg class="caret" width="7" height="5" viewBox="0 0 8 5" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"><path d="m1 1 3 3 3-3"/></svg></button>
+          </div>
+        </div>
+        <div class="pbody">
+          <p class="pali">Tatra kho bhagavā pañcavaggiye bhikkhū āmantesi — anuttaraṃ dhammacakkaṃ pavattitaṃ.</p>
+          <p class="zh">世尊对五比丘说：无上法轮已转起。</p>
+        </div>
+        <div class="sheet" data-od-id="bottom-sheet">
+          <div class="grab"></div>
+          <div class="chips">
+            <button class="chip" aria-pressed="true">本章</button>
+            <button class="chip" aria-pressed="false">经文名</button>
+            <button class="chip" aria-pressed="false">巴利全文</button>
+            <button class="chip" aria-pressed="false">译文</button>
+          </div>
+          <div class="phead"><span><b>本章</b> · 相应部 12.2</span><span>3 处</span></div>
+          <div class="res"><span class="rp"><i>Tatra kho <mark>bhagavā</mark> pañcavaggiye bhikkhū āmantesi</i><em>世尊对五比丘说</em></span><span class="rloc"><span class="seg">段 3</span></span></div>
+          <div class="res"><span class="rp"><i>Evaṃ me sutaṃ — ekaṃ samayaṃ <mark>bhagavā</mark> sāvatthiyaṃ</i><em>如是我闻，一时世尊住舍卫城</em></span><span class="rloc"><span class="seg">段 1</span></span></div>
+          <div class="res"><span class="rp"><i><mark>bhagavā</mark> antarā ca rājagahaṃ antarā ca nāḷandaṃ</i><em>世尊在王舍城与那烂陀之间</em></span><span class="rloc"><span class="seg">段 7</span></span></div>
+        </div>
+      </div>
+      <p class="why"><b>为什么是底部抽屉。</b>390px 上字段只有约 210px，四个模式标签一个字都放不下；把下拉挂在字段下面，会被键盘从底部吃掉一半，而且落点全在拇指够不到的屏幕上方。抽屉从底部升起、停在键盘上方，用拇指划得到；同时它整宽，四个模式终于有了一个能横排的家——字段里那个按钮退化成同一枚标签的缩小版，只负责显示当前范围，不负责挑选。抽屉顶部那排圆片就是本节答案：<b>宽屏用字段右端的一个按钮，窄屏用抽屉顶部的一排圆片，同一个模型、两个落位。</b></p>
+    </div>
+  </section>
+
+  <!-- ── 4 · 没人画的状态 ────────────────────────────────── -->
+  <section data-od-id="undrawn-states">
+    <h2>4 · 没人画的那几个状态</h2>
+    <div class="cards">
+
+      <div class="card" data-od-id="state-no-result">
+        <p class="ct">无结果</p>
+        <div class="cb">
+          <p class="pali" style="font-size:14px">sati</p>
+          <p class="zh" style="margin-top:6px">本章内 0 处。相应部 12.2 里没有这个词。</p>
+        </div>
+        <div class="pfoot"><span>不是「什么都没找到」就完了</span><span class="link">到巴利全文里搜</span></div>
+      </div>
+
+      <div class="card" data-od-id="state-empty-query">
+        <p class="ct">空查询</p>
+        <div class="cb">
+          <p class="zh">最近：<span class="link">dhammacakkaṃ</span> · <span class="link">如是我闻</span> · <span class="link">suttaṃ</span></p>
+          <p class="zh" style="margin-top:8px">当前范围：本章 相应部 12.2 · 共 4 段</p>
+        </div>
+        <div class="pfoot"><span>聚焦即展开，不显示「无结果」</span></div>
+      </div>
+
+      <div class="card" data-od-id="state-pending">
+        <p class="ct">还在输入</p>
+        <div class="cb">
+          <div class="field focus" style="background:var(--ivory)">
+            <span class="sico"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"><path d="M2.4 4.4h11.2M2.4 8h11.2M2.4 11.6h7.4"/></svg></span>
+            <input class="q" value="dhammacak" aria-label="搜索">
+            <span class="prog"><i></i></span>
+          </div>
+          <p class="zh" style="margin-top:8px">旧结果留在原地、降到 55%。去抖 120ms。</p>
+        </div>
+        <div class="pfoot"><span>绝不先清空再填</span></div>
+      </div>
+
+      <div class="card" data-od-id="state-scope-limit">
+        <p class="ct">范围受限于本地</p>
+        <div class="cb">
+          <p class="zh">已下载的 <b>12 部经</b>里没有「法轮」。<br>全藏 84 部，还有 72 部没下载，译文不在本机。</p>
+        </div>
+        <div class="pfoot"><span>能搜多少就说多少</span><span class="link">下载全部（82 MB）</span></div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ── 5 · 高亮 ───────────────────────────────────────── -->
+  <section data-od-id="highlight">
+    <h2>5 · 命中高亮</h2>
+    <div class="hl">
+      <div class="hlbox">
+        <p>anuttaraṃ <mark>dhammacakkaṃ</mark> pavattitaṃ, appaṭivattiyaṃ samaṇena vā brāhmaṇena vā</p>
+        <p class="k">读者输入 <b>dhammacakkam</b>（没有 ṃ）。索引存的是去音标的孪生串，位置表指回原文，所以高亮的是经文自己的拼法 <b>dhammacakkaṃ</b>——整个字形，包括那个他没打的 ṃ。</p>
+      </div>
+      <div class="hlbox">
+        <p>Evaṃ me sutaṃ — ekaṃ samayaṃ <mark>bhagavā</mark> sāvatthiyaṃ viharati</p>
+        <p class="k">高亮用同一枚墨蓝：淡墨底 <b>#e4ecf5</b> + 墨蓝字 + 权重 500。不加下划线、不加第二种颜色。命中在结果里永远整词高亮，不做逐字母高亮——逐字母在带音标的字上会碎成两半。</p>
+      </div>
+    </div>
+    <div class="hlbox" style="margin-top:18px">
+      <p class="k" style="margin-top:0">索引折叠的字符对（单向：索引折叠，原文不动）</p>
+      <div class="fold"><span>ṃ → m</span><span>ṅ → n</span><span>ñ → n</span><span>ṭ → t</span><span>ḍ → d</span><span>ṇ → n</span><span>ā → a</span><span>ī → i</span><span>ū → u</span><span>ś → s</span><span>大小写不敏感</span></div>
+      <p class="k">折叠是有代价的：<b>sati</b> 会连 <b>sāti</b> 一起搜出来。所以排序是「带音标的精确匹配在前，折叠匹配在后」，而不是过滤掉后者——读者能看见原文，就永远能自己判断。字段里的字<b>永不自动改写</b>，也不做自动更正。</p>
+    </div>
+  </section>
+
+  <!-- ── 6 · 两段理由 ───────────────────────────────────── -->
+  <section data-od-id="reasoning">
+    <h2>6 · 两段理由</h2>
+    <div class="paras">
+      <p><b>模式开关为什么不做成四个标签。</b>56px 的顶栏里，站名和账号菜单已经占了两端，剩下 560px 要给输入框；四个中文标签横排放进去，输入框只剩 300px 不到，而且标签一旦固定在字段里，就永远占着宽度——读者 90% 的时间根本不在切模式。所以字段右端只留一个<b>当前范围按钮</b>：它的形状是分段控件的一段（圆角、贴边、带刳号），所以看得出「还有别的段」；它永远写着当前模式，所以「我现在在搜什么」从不隐藏；点开是一张 308px 的小菜单，四行各带一句范围说明和快捷键，切换是一次点击。为了让它不必被点开也能读懂，模式同时写进另外两个地方——字段左端那个小图示，和占位符的措辞（「在本章内搜索」／「在巴利全文里搜索」）。范围因此在一处可点、三处可见，不花一个额外像素。再补一个不用读字的信号：本章是暖砂底（安全、就在眼前），另外三种是淡墨底 + 墨蓝字（你在搜整个藏）。</p>
+      <p><b>一行结果里为什么是这些东西。</b>一行两排字，上排是经文原文，下排是它对应的译文，右侧是落点，三样东西各回答一个问题：这是不是我找的那句（原文，所以用衬线——在面板里也保持衬线，这样一眼就知道哪一行是经文、哪一行是界面）、它是什么意思（译文，无衬线、11.5px 起，扫读用）、点了会落到哪里（经文名 + 段号，永远靠右、不对齐左端，因为它不是内容）。全文模式<b>每段只出一条</b>，不是一个命中一条：一个词在同一段里出现五次，读者要的是那一段，不是五行一样的东西；于是行数由段落数决定，命中总数放进表头（「12 段 · 47 处」），点哪一行都跳到那一段。面板固定只显示 5 行，页脚负责说真话——本地模式写「仅在本章内查找」并给一个扩大范围的入口，全藏模式写「显示 5 / 12 段」并给一个通往完整结果的入口。<b>字段永远不变成结果页，但它也永远不假装结果只有这些。</b></p>
+    </div>
+  </section>
+
+</main>
+</body>
+</html>
