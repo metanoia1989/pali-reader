@@ -83,6 +83,9 @@ func (s *Server) routes() {
 		r.Get("/search", s.handleSearchAll)
 		r.Get("/search/titles", s.handleTitleSearch)
 		r.Get("/dict/lookup", s.handleLookup)
+		// The English add-on dictionary, for words in the 参考译文. Public like
+		// the other dictionary reads: it answers about a word, not a reader.
+		r.Get("/dict/en/lookup", s.handleEnLookup)
 		r.Get("/dict/suggest", s.handleSuggest)
 		r.Get("/dict/declension", s.handleDeclension)
 

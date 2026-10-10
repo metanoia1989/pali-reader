@@ -30,7 +30,7 @@ func main() {
 	log.SetFlags(log.Ltime)
 	var (
 		sources = flag.String("sources", "../data/sources", "directory holding the upstream databases")
-		steps   = flag.String("steps", "all", "comma separated: schema,dict,text,catalog,entries,ref,freq,report,all")
+		steps   = flag.String("steps", "all", "comma separated: schema,dict,text,catalog,entries,ref,endict,freq,report,all")
 		minCov  = flag.Float64("ref-min-coverage", 0.15, `skip a book whose reference alignment places less than this.
 
 The number is the share of the lines its mapped volumes could contribute that
@@ -125,6 +125,13 @@ and nothing for the rest.`)
 		}, g, *minCov, log.Printf)
 	})
 
+	// The English add-on. It has its own step so it can be refreshed on its own
+	// — a corrected definition costs one import of one small table, not a
+	// corpus rebuild and not a new service binary. A missing seed skips it.
+	step("endict", func() error {
+		return importer.ImportEnglishDictionary(filepath.Join(dir, importer.EnglishDictSeed), g, log.Printf)
+	})
+
 	step("freq", func() error { return importer.ImportWordFrequency(g, log.Printf) })
 
 	// Read-only, and about the quality of what was written rather than the
@@ -144,6 +151,10 @@ func dropTables(g *store.DB) error {
 		"text_segments", "text_toc", "text_books", "text_categories",
 		"dict_lookup", "dict_headwords", "dict_templates", "dict_roots",
 		"dict_entries", "dict_sources", "ref_translations", "word_freq",
+		// The English add-on is an imported table like the rest, so a clean
+		// rebuild clears it too — and the endict step, which runs in "all",
+		// fills it again from the seed.
+		"dict_en_entries",
 	}
 	// AutoMigrate adds columns but will not alter an existing column's
 	// collation, and the dictionary key columns changed to utf8mb4_bin when it

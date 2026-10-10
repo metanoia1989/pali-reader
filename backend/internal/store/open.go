@@ -87,6 +87,11 @@ func (d *DB) Migrate() error {
 		&TextCategory{}, &TextBook{}, &TextSegment{}, &TextTOC{},
 		&DictHeadword{}, &DictLookup{}, &DictTemplate{}, &DictRoot{},
 		&DictEntry{}, &DictSource{},
+		// The English add-on dictionary. It is migrated with the rest even
+		// though the importer may never be run with it: an empty table is what
+		// "no entry" is read from, and creating it on the schema step keeps the
+		// API's SELECT from having to be defensive about a missing table.
+		&DictEnEntry{},
 		&RefTranslation{},
 		&User{}, &PendingRegistration{}, &Session{},
 		&WordPick{}, &Note{}, &Translation{}, &Progress{}, &Bookmark{},

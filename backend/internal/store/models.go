@@ -278,6 +278,34 @@ type DictSource struct {
 
 func (DictSource) TableName() string { return "dict_sources" }
 
+// DictEnEntry is one English headword with the meanings ECDICT gives it. It is
+// the dictionary the English 参考译文 is read against, and it is a SECOND
+// dictionary, not part of the Pāḷi one: it shares no key, no lookup and no
+// meaning with dict_headwords, and merging the two would let an English word
+// answer for a Pāḷi form that happens to be spelled the same way.
+//
+// Word is the lookup key and is stored lowercased. The column is binary
+// collated (铁律 1), so unlike the source project — which leaned on MySQL's
+// utf8mb4_general_ci to fold case — the case folding has to happen before the
+// row is written. Head keeps the spelling the dictionary itself uses, so the
+// popup can show "Aachen" rather than the key it was filed under.
+//
+// Senses holds [{"pos":"n.","def":"…"}] as JSON. It is text rather than rows
+// because it is only ever read whole, for one headword, and never queried into.
+type DictEnEntry struct {
+	Word     string `gorm:"primaryKey;column:word;type:varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_bin"`
+	Head     string `gorm:"size:64"`
+	Phonetic string `gorm:"size:191"`
+	Senses   string `gorm:"type:text;not null"`
+}
+
+// TableName is declared rather than inferred. GORM pluralises, and a table
+// whose name is produced by an inflector is a table whose name changes when
+// somebody renames the struct — the source project lost "dictionary" to
+// "dictionaries" this way. store_test.go asserts that the declared name is the
+// one GORM would infer, so the two cannot drift apart unnoticed.
+func (DictEnEntry) TableName() string { return "dict_en_entries" }
+
 // ---------------------------------------------------------------------------
 // Reference translations
 // ---------------------------------------------------------------------------

@@ -210,7 +210,12 @@ cd backend
 DB_DSN='...' ../go.sh run ./cmd/importer -sources ../data/sources -steps all
 ```
 
-`-steps` 支持 `schema,dict,text,entries,ref,freq`，每步幂等，失败后可从该步续跑。
+`-steps` 支持 `schema,dict,text,catalog,entries,ref,endict,freq,report`，每步幂等，失败后可从该步续跑。
+
+`endict` 是**可选的附加项**：英文参考译文的点词查词用的 ECDICT 词典。源文件
+`sources/dict_seed.json`（8.9 MB，构建期输入，不进服务二进制）不存在时该步跳过，阅读器
+照常工作，只是英文词点开显示「词典暂无收录」。单独刷新它只要
+`./run-import.sh endict`，不必重导语料、也不必重发服务二进制。
 
 ## 部署
 

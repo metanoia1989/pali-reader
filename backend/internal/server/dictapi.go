@@ -25,6 +25,33 @@ func (s *Server) handleLookup(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, res)
 }
 
+// handleEnLookup answers for one word of the English 参考译文.
+//
+// It is a separate endpoint from /dict/lookup on purpose. The Pāḷi lookup
+// assembles analyses, meanings from several dictionaries, compound splits, the
+// declension row that matched and the corpus frequency of the word; this one
+// returns the headword's senses and nothing else. Merging them would have the
+// English popup pay for a Pāḷi entry it has no use for, and would put English
+// words into the Pāḷi panel's history.
+//
+// It always answers 200. A word the dictionary does not have is a normal
+// answer, not a failure — and so is a dictionary that has not been imported,
+// which comes back with available:false so the popup can say so instead of
+// claiming the word has no entry.
+func (s *Server) handleEnLookup(w http.ResponseWriter, r *http.Request) {
+	word := strings.TrimSpace(r.URL.Query().Get("word"))
+	if word == "" || len([]rune(word)) > 80 {
+		writeErr(w, http.StatusBadRequest, "bad_request", "缺少要查的词")
+		return
+	}
+	res, err := s.dict.LookupEnglish(r.Context(), word)
+	if err != nil {
+		writeServerErr(w, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, res)
+}
+
 func (s *Server) handleSuggest(w http.ResponseWriter, r *http.Request) {
 	q := strings.TrimSpace(r.URL.Query().Get("q"))
 	items, err := s.dict.Suggestions(r.Context(), q, queryInt(r, "limit", 20))

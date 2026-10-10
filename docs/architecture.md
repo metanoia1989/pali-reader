@@ -116,6 +116,17 @@ GET /api/dict/lookup?word=buddhassa
 `tipitaka_pali.db` 的 `dpd_grammar` 表——那是 DPD 自己渲染出来的每词形语法表，用
 `ParseGrammar` 反向解析回 `{pos, grammar, lemma}` 结构。约 16.3 万个词形由此拿到分析。
 
+**英文参考译文的点词查词是另一条路。** 它不进面板、不查 DPD：`dict_en_entries`
+（主键 `word`，`utf8mb4_bin`）由 `cmd/importer -steps endict` 从
+`sources/dict_seed.json` 灌入，`internal/dict.Service.LookupEnglish` 一次
+`WHERE word IN (候选)` 拿一行，前面套同一个 Redis 缓存。候选由
+`EnglishCandidates` 生成：原词 → 缩写（`don't`→`do`）→ 撇号/连字符前半 → 屈折还原
+（`monks`→`monk`、`uses`→`use`、`stopped`→`stop`）。顺序就是正确性：先去掉两个字母的规则
+会把 `uses`/`used` 答成 `us`。**解析得到的比例**（30 万行英文参考译文、573.6 万词次实测，
+`TestEnglishCoverage`）：原词直查命中 91.1%，加屈折还原 94.2%；剩下的全是译文保留的巴利语借词（kamma、dhamma、jhāna、
+nibbāna、bhikkhu、arahant、sutta、saṅgha），词典里没有、也不编，前端如实显示「词典暂无收录」
+——巴利语就在上一行，点它走的是 DPD 面板。
+
 **「词典里没有这个词」怎么办。** 按顺序兜底：DPD 的 `deconstructor` → `dpd_word_split`
 的替代切分 → 词目自身的 `compound_construction`。三者都空就如实说词典未收录，不猜。
 

@@ -240,6 +240,44 @@
     比丢掉斜体更糟。导入时统一剥掉（`cleanTranslation`／`cleanInlineTags`），把「恢复强调」
     留给渲染端做。
 
+22. **英文词典是附加项，不是核心：不进二进制、自成一张表、缺了要照样能读。**
+
+    英文参考译文的点词查词用的是 ECDICT（`sources/dict_seed.json`，8.9 MB）。它是**构建期
+    输入**：`cmd/importer -steps endict` 读它、写 `dict_en_entries`，服务二进制里没有它——
+    改一条释义不该重建整个服务。源文件不在就**跳过该步**（不是报错），表空时接口回
+    `available:false`，弹窗写「英文词典尚未导入」而不是「词典暂无收录」：前者是这台机器
+    的事实，后者是这个词的事实，混为一谈就是撒谎。单独刷新一只手打得到：
+    `./run-import.sh endict`，不重导语料、不重发二进制（重导完仍要 `-flush-cache`）。
+
+    它和 `dict_headwords` **是两部词典，不合并**：巴利语词形与英语单词拼写相同是两个问题，
+    用英语义项回答巴利语的点击是胡说。
+
+    **英文词要还原屈折才查得到，而顺序就是正确性。** 候选按「原词 → 缩写 → 撇号/连字符
+    前半 → 屈折还原」生成，`EnglishCandidates` 里先试**去掉一个字母**的规则：英语动词以 e
+    结尾时过去式只加 d，名词复数常只加 s，所以 `used` 是 `use`+`d`、`uses` 是 `use`+`s`；
+    先去掉两个字母会把它们答成 `us`——那也是个真词条。实测（30 万行英文参考译文、
+    573.6 万词次，`TestEnglishCoverage`）：原词直查命中 91.1%，加上述还原 94.2%。
+
+    **剩下那 5.8% 主要是巴利语借词，不补。** kamma、dhamma、jhāna、nibbāna、bhikkhu、
+    arahant、sutta、saṅgha——译文原样保留的巴利语，英语词典里根本没有（另有一小撮是
+    nutriment、supramundane 这类 ECDICT 未收的冷僻英文词）。**不要**为此加一条
+    回退到 DPD 的路径：巴利语就在上一行、本来就可点、背后是完整词条，而这个弹窗是一次
+    「瞥一眼」。所以 `bhikkhus` 就是查不到，弹窗如实写「词典暂无收录：bhikkhus」。
+    看到「无词条」别当成 lookup 的 bug——这就是它的范围。
+
+23. **英文小弹窗与巴利面板是两件东西，不要合并。** 面板是干活的工具：记录读法、可叠加、
+    可拖动、留着不走。英文弹窗只是看一眼别人写的词：**只有展示**，没有选、没有写回正文、
+    没有历史、没有「语料 N 次」。它只有一个，点下一个词就换内容；点别处、按 Esc、点巴利语
+    词，它就收起来。
+
+    第 17 条的三件事因此不都适用：**能拖**是给叠起来、留着不走的浮窗用的，一个「点哪儿都
+    关」的小卡片不需要窗口管理；**不压住正文**靠的是「只在词下方（下方不够就翻到上方）」以
+    及「点一下就没了」，不是靠坐标算；**被下一个词清掉**照做——那是它的撤销方式，也是它
+    不需要关闭按钮就安全的原因。
+
+    手机上它是底部的小卡片（`< 760px`，与左栏折叠同一个阈值），PC 上贴在词下面并带一个
+    指着那个词的尖角。中文译文**不可点**：那部词典是英文的，中文里没有可查的东西。
+
 ## 代码约定
 
 - Go：错误一律 `fmt.Errorf("...: %w", err)` 包装；handler 不直接 import GORM（用
@@ -275,6 +313,19 @@ cd backend && ../go.sh build ./...     # go 的模块缓存在仓库外，用 go
 cd backend && ../go.sh test ./internal/...
 ./deploy/deploy.sh                     # 交叉编译 + 上传 + 重启 + 自检
 ./deploy/deploy.sh backend             # 只发后端
+```
+
+**`deploy/deploy.sh backend` 不发 `pali-importer`。** 改到导入路径（含 `endict`）时要自己
+交叉编译、上传、安装，并**两边对 MD5**：旧二进制照样跑得起来，结果是「用旧导入器导了新表」，
+现场看不出任何异常。已经栽过两次。
+
+```bash
+source goenv.sh && cd backend
+CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -trimpath -ldflags "-s -w" -o /tmp/pali-importer ./cmd/importer
+md5 -q /tmp/pali-importer                       # 本机
+scp /tmp/pali-importer bigubuntu:/tmp/
+ssh bigubuntu "md5sum /tmp/pali-importer"       # 必须一致，再 install 到
+# /www/server/go_project/pali_reading/pali-importer，装完再对一次
 ```
 
 对齐质量在本机就能量，不必上服务器：`pali-data/` 里有与服务器同一份的
@@ -377,6 +428,7 @@ DSH 的 HMR（它监视 `cordis.patch.yml`），插件会被 dispose + 重建，
 | `epitaka_zh.db` / `epitaka_en.db` | `sources/` | 参考译文，与上面同一组主键 |
 | `zh/*.txt` | `sources/zh/` | 巴漢／漢譯词典（Tabfile） |
 | `zh_supplement.json` | `sources/` | 社区整理的中文词典补编 |
+| `dict_seed.json` | `sources/` | ECDICT 英文词典（英文 参考译文 点词查词用，可选） |
 
 服务器的源文件在 `/www/server/go_project/pali_reading/sources/`，导入日志在
 同目录 `import.log`。

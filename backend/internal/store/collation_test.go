@@ -26,6 +26,7 @@ func TestDictionaryKeyColumnsAreBinaryCollated(t *testing.T) {
 		{&DictHeadword{}, "Lemma2", "lemma_2"},
 		{&DictTemplate{}, "Pattern", "pattern"},
 		{&DictEntry{}, "Word", "word"},
+		{&DictEnEntry{}, "Word", "word"},
 		{&WordFreq{}, "Word", "word"},
 		{&VocabItem{}, "Lemma", "lemma"},
 	}
